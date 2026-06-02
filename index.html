@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>单词打地鼠 V2 - 幼儿英语听力游戏</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--primary:#FF6B6B;--primary-light:#FF8E8E;--primary-dark:#E05555;--secondary:#4ECDC4;--accent:#FFE66D;--accent-dark:#F0D456;--bg:#F0F4F8;--bg-card:#FFFFFF;--text:#2D3436;--text-light:#636E72;--text-muted:#B2BEC3;--border:#DFE6E9;--success:#00B894;--warning:#FDCB6E;--danger:#E17055;--shadow:0 2px 12px rgba(0,0,0,.06);--shadow-lg:0 8px 30px rgba(0,0,0,.10);--radius:14px;--radius-sm:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.nav{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;height:54px;box-shadow:0 1px 4px rgba(0,0,0,.04);position:sticky;top:0;z-index:100}
+.nav-logo{font-size:18px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:6px;cursor:pointer}
+.nav-logo span{font-size:22px}
+.nav-tabs{display:flex;margin-left:32px;gap:4px}
+.nav-tab{padding:7px 18px;border-radius:20px;border:none;background:transparent;color:var(--text-light);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
+.nav-tab:hover{background:#f0f0f0}
+.nav-tab.active{background:var(--primary);color:#fff}
+
+.page{display:none;padding:20px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+
+/* Admin */
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.admin-header h2{font-size:20px;font-weight:700}
+.admin-stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat-card{background:var(--bg-card);padding:10px 16px;border-radius:var(--radius-sm);box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:80px}
+.stat-card .label{font-size:11px;color:var(--text-muted)}
+.stat-card .value{font-size:22px;font-weight:700;color:var(--primary)}
+.admin-filters{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.admin-filters select,.admin-filters input{padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:#fff}
+.admin-filters input{min-width:160px}
+
+.btn{padding:7px 16px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-success{background:var(--success);color:#fff}
+.btn-warning{background:var(--warning);color:var(--text)}
+.btn-blue{background:#4A90D9;color:#fff}
+.btn-blue:hover{background:#357ABD}
+
+.table-wrapper{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.table-scroll{overflow-x:auto;max-height:calc(100vh - 360px);overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#f8f9fa;padding:10px 14px;text-align:left;font-weight:600;color:var(--text-light);border-bottom:2px solid var(--border);position:sticky;top:0;z-index:1;white-space:nowrap}
+tbody td{padding:8px 14px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tbody tr:hover{background:#fafbfc}
+
+.photo-cell{text-align:center;width:54px;position:relative}
+.photo-cell img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border);cursor:pointer;transition:transform .2s}
+.photo-cell img:hover{transform:scale(1.5);z-index:10;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.photo-cell .no-photo{color:var(--text-muted);font-size:11px}
+.photo-cell .remove-photo{position:absolute;top:2px;right:4px;background:rgba(255,0,0,.7);color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:none;line-height:1}
+.photo-cell:hover .remove-photo{display:block}
+
+.emoji-cell{font-size:22px;text-align:center;width:50px}
+.word-cell{font-weight:600;font-size:15px}
+.category-tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:500;white-space:nowrap}
+.difficulty-tag{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.difficulty-简单{background:#e8f5e9;color:#2e7d32}
+.difficulty-中等{background:#fff3e0;color:#ef6c00}
+.difficulty-困难{background:#ffebee;color:#c62828}
+.edit-select{padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:#fff}
+.edit-input{padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:#fff;width:120px}
+
+.pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:12px}
+.pagination button{padding:5px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;cursor:pointer;font-size:12px}
+.pagination button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+
+.bulk-actions{display:flex;gap:6px;align-items:center;padding:8px 14px;background:#FFF8E1;border-bottom:1px solid #FFE082;font-size:12px;flex-wrap:wrap}
+.bulk-actions .bulk-label{font-weight:600;color:#F57F17}
+.bulk-group{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.bulk-group label{font-size:11px;color:var(--text-light);font-weight:600}
+.bulk-sep{width:1px;height:20px;background:#e0d0a0;margin:0 4px}
+
+/* Photo fetch progress */
+.photo-fetch-bar{margin:12px 0;padding:12px 16px;background:linear-gradient(135deg,#E3F2FD,#BBDEFB);border-radius:var(--radius);font-size:13px;color:#1565C0;display:none}
+.photo-fetch-bar .bar{height:8px;background:#BBDEFB;border-radius:4px;margin-top:8px;overflow:hidden}
+.photo-fetch-bar .bar-fill{height:100%;background:linear-gradient(90deg,#1976D2,#42A5F5);border-radius:4px;transition:width .3s}
+.photo-fetch-bar .stats{display:flex;gap:16px;margin-top:8px;font-size:12px}
+.photo-fetch-bar .stats span{color:#0D47A1;font-weight:600}
+
+/* Game Select */
+.game-setup{max-width:660px;margin:0 auto}
+.game-setup h2{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px}
+.game-setup .subtitle{text-align:center;color:var(--text-light);margin-bottom:24px;font-size:14px}
+.setup-section{background:var(--bg-card);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.setup-section h3{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chip-group{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 14px;border:2px solid var(--border);border-radius:18px;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;background:#fff;user-select:none}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.selected{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.chip .count{display:inline-block;background:rgba(0,0,0,.08);border-radius:8px;padding:0 5px;font-size:10px;margin-left:3px}
+.chip.selected .count{background:rgba(255,255,255,.25)}
+.chip-select-all{background:#f8f9fa;border-style:dashed;font-weight:600}
+.chip-select-all.selected{background:var(--accent);color:var(--text);border-color:var(--accent-dark);border-style:solid}
+
+.game-preview{background:var(--bg-card);border-radius:var(--radius);padding:18px 22px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.preview-info{display:flex;gap:20px;flex-wrap:wrap}
+.preview-item{display:flex;flex-direction:column}
+.preview-item .label{font-size:11px;color:var(--text-muted)}
+.preview-item .value{font-size:18px;font-weight:700;color:var(--primary)}
+
+.btn-start{padding:12px 40px;font-size:16px;font-weight:700;border-radius:28px;border:none;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;cursor:pointer;transition:all .2s;box-shadow:0 4px 15px rgba(255,107,107,.35)}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,107,107,.45)}
+.btn-start:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+.question-count-select{display:flex;gap:6px;margin-top:12px;align-items:center}
+.question-count-select label{font-size:13px;color:var(--text-light);margin-right:4px}
+.question-count-select .chip{padding:4px 12px}
+
+/* Game */
+.game-container{max-width:700px;margin:0 auto;text-align:center;padding-top:8px}
+.game-top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:10px 16px;background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow)}
+.game-score{font-size:18px;font-weight:700}
+.game-score span{color:var(--primary)}
+.game-progress{font-size:13px;color:var(--text-light)}
+
+.word-prompt{font-size:32px;font-weight:700;margin:16px 0 4px;color:var(--primary);min-height:44px}
+.play-btn{width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:22px;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(255,107,107,.25);margin:8px auto 16px;display:flex;align-items:center;justify-content:center}
+.play-btn:hover{transform:scale(1.1)}
+.play-btn:active{transform:scale(.95)}
+
+.mole-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;max-width:460px;margin:0 auto}
+.mole-hole{position:relative;height:120px;border-radius:var(--radius);background:linear-gradient(180deg,#8B7355,#6B5340);overflow:hidden;cursor:pointer;box-shadow:inset 0 4px 8px rgba(0,0,0,.3)}
+.mole-hole .hole-top{position:absolute;bottom:0;left:0;right:0;height:26px;background:#5C432D;border-radius:50% 50% 0 0;z-index:2}
+.mole{position:absolute;bottom:8px;left:50%;transform:translateX(-50%) translateY(100%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);z-index:1;display:flex;flex-direction:column;align-items:center}
+.mole.show{transform:translateX(-50%) translateY(0)}
+.mole .mole-emoji{font-size:44px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))}
+.mole .mole-photo{width:60px;height:60px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25);background:#f5f5f5}
+.mole .mole-body{width:64px;height:24px;background:linear-gradient(180deg,#A0845C,#8B7355);border-radius:50% 50% 0 0;margin-top:-3px}
+.mole.correct .mole-emoji,.mole.correct .mole-photo{animation:correctBounce .5s ease}
+.mole.wrong .mole-emoji,.mole.wrong .mole-photo{animation:wrongShake .5s ease}
+@keyframes correctBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* Pick mode */
+.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:420px;margin:0 auto;padding:10px}
+.pick-option{padding:18px;font-size:17px;font-weight:600;border:2px solid var(--border);border-radius:var(--radius);background:#fff;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pick-option:hover{border-color:var(--primary);color:var(--primary);transform:scale(1.02)}
+.pick-option .pick-photo{width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+.pick-option .pick-emoji{font-size:28px}
+.pick-option .pick-text{font-size:15px;font-weight:600}
+
+/* Feedback */
+.game-feedback{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:1000;pointer-events:none}
+.feedback-emoji{font-size:72px;animation:feedbackPop .8s ease forwards}
+@keyframes feedbackPop{0%{transform:scale(0);opacity:1}50%{transform:scale(1.5);opacity:1}100%{transform:scale(2);opacity:0}}
+
+/* Result */
+.result-container{max-width:480px;margin:30px auto;text-align:center}
+.result-card{background:var(--bg-card);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow-lg)}
+.result-score{font-size:56px;font-weight:700;color:var(--primary);line-height:1}
+.result-label{font-size:14px;color:var(--text-light);margin-top:2px}
+.result-stars{font-size:36px;margin:16px 0}
+.result-details{margin-top:16px;text-align:left;max-height:300px;overflow-y:auto}
+.result-word{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.result-word .rw-img{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+.result-word .rw-emoji{font-size:18px}
+.result-word .word{font-weight:600;flex:1;margin-left:8px}
+.result-word .status{font-size:11px;padding:2px 8px;border-radius:8px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#333;color:#fff;padding:8px 20px;border-radius:18px;font-size:13px;z-index:3000;transition:transform .3s;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Responsive */
+@media(max-width:640px){
+  .nav{padding:0 10px}
+  .nav-tabs{margin-left:10px}
+  .nav-tab{padding:5px 10px;font-size:12px}
+  .page{padding:12px}
+  .mole-grid{gap:10px;padding:8px}
+  .mole-hole{height:105px}
+  .mole .mole-emoji{font-size:38px}
+  .mole .mole-photo{width:52px;height:52px}
+  .word-prompt{font-size:26px}
+  .btn-start{padding:10px 30px;font-size:14px}
+  .admin-filters select,.admin-filters input{min-width:auto}
+  .bulk-actions{flex-direction:column;align-items:flex-start}
+  .photo-cell img:hover{transform:scale(2)}
+}
+</style>
+</head>
+<body>
+<!-- 页面加载失败时的提示（JS正常后会被init()隐藏） -->
+<div id="init-error" style="display:none;padding:40px;text-align:center;color:#E17055;font-size:16px;line-height:1.8">
+  ⚠️ 页面脚本加载失败，请尝试刷新页面（Ctrl+F5）<br>
+  <span style="font-size:13px;color:#999">如多次失败，请联系开发者</span>
+</div>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="switchPage('admin')"><span>🐹</span> 单词打地鼠 V2</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-page="admin" onclick="switchPage('admin')">📋 词库管理</button>
+    <button class="nav-tab" data-page="game-select" onclick="switchPage('game-select')">🎮 开始游戏</button>
+  </div>
+</nav>
+
+<!-- ===== Admin ===== -->
+<div class="page active" id="page-admin">
+  <div class="admin-header">
+    <h2>词库管理</h2>
+    <div class="admin-stats">
+      <div class="stat-card"><span class="label">总词数</span><span class="value" id="stat-total">0</span></div>
+      <div class="stat-card"><span class="label">有照片</span><span class="value" id="stat-photos" style="color:#4A90D9">0</span></div>
+      <div class="stat-card"><span class="label">有Emoji</span><span class="value" id="stat-emoji" style="color:var(--secondary)">0</span></div>
+      <div class="stat-card"><span class="label">分类数</span><span class="value" id="stat-cats" style="color:var(--primary)">0</span></div>
+    </div>
+  </div>
+  <div class="admin-filters">
+    <select id="filter-category" onchange="currentPage=1;renderTable()"><option value="">全部分类</option></select>
+    <select id="filter-difficulty" onchange="currentPage=1;renderTable()">
+      <option value="">全部难度</option><option value="简单">简单</option><option value="中等">中等</option><option value="困难">困难</option>
+    </select>
+    <select id="filter-proficiency" onchange="currentPage=1;renderTable()">
+      <option value="">全部熟练度</option><option value="未学习">未学习</option><option value="认识">认识</option><option value="熟悉">熟悉</option><option value="掌握">掌握</option>
+    </select>
+    <select id="filter-image" onchange="currentPage=1;renderTable()">
+      <option value="">全部图片</option><option value="photo">有照片</option><option value="emoji">有Emoji</option><option value="none">无图片</option>
+    </select>
+    <input type="text" id="filter-search" placeholder="搜索单词..." oninput="currentPage=1;renderTable()">
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-blue btn-sm" onclick="batchFetchPhotos()">🖼️ 批量获取图片</button>
+    <button class="btn btn-outline btn-sm" onclick="exportExcel()">📥 导出Excel</button>
+    <button class="btn btn-outline btn-sm" onclick="exportJSON()">📥 导出JSON</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">📤 导入</button>
+    <input type="file" id="import-file" accept=".xlsx,.xls,.json" style="display:none" onchange="handleImport(event)">
+    <button class="btn btn-outline btn-sm" onclick="restoreDefault()" style="color:#e74c3c;border-color:#e74c3c">♻️ 恢复默认词库</button>
+    <button class="btn btn-outline btn-sm" onclick="autoAssignEmoji()">😊 自动匹配Emoji</button>
+  </div>
+  <div class="photo-fetch-bar" id="photo-progress"></div>
+
+  <!-- Bulk actions -->
+  <div class="bulk-actions" id="bulk-actions" style="display:none">
+    <span class="bulk-label">已选 <span id="bulk-count">0</span> 项</span>
+    <div class="bulk-sep"></div>
+    <div class="bulk-group"><label>分类:</label><select id="bulk-category" class="edit-select"></select><button class="btn btn-sm btn-outline" onclick="bulkSetCategory()">应用</button></div>
+    <div class="bulk-sep"></div>
+    <div class="bulk-group"><label>难度:</label><select id="bulk-difficulty" class="edit-select"><option value="简单">简单</option><option value="中等">中等</option><option value="困难">困难</option></select><button class="btn btn-sm btn-outline" onclick="bulkSetDifficulty()">应用</button></div>
+    <div class="bulk-sep"></div>
+    <div class="bulk-group"><label>熟练度:</label><select id="bulk-proficiency" class="edit-select"><option value="未学习">未学习</option><option value="认识">认识</option><option value="熟悉">熟悉</option><option value="掌握">掌握</option></select><button class="btn btn-sm btn-outline" onclick="bulkSetProficiency()">应用</button></div>
+    <div class="bulk-sep"></div>
+    <button class="btn btn-sm btn-outline" onclick="clearSelection()">取消选择</button>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" id="select-all" onchange="toggleSelectAll()"></th>
+          <th style="width:54px">照片</th>
+          <th style="width:50px">Emoji</th>
+          <th>单词</th>
+          <th>语义分类</th>
+          <th>难度</th>
+          <th>熟练度</th>
+          <th>备注</th>
+        </tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- ===== Game Select ===== -->
+<div class="page" id="page-game-select">
+  <div class="game-setup">
+    <h2>🎮 选择游戏范围</h2>
+    <p class="subtitle">选择游戏类型，然后筛选要测试的单词</p>
+
+    <!-- ① 游戏类型 -->
+    <div class="setup-section">
+      <h3>🎲 游戏类型 <span style="font-size:11px;color:var(--text-muted)">（必选）</span></h3>
+      <div class="chip-group" id="display-mode-chips">
+        <div class="chip active" data-value="image" onclick="toggleDisplayMode(this)">🖼️ 图片呈现</div>
+        <div class="chip" data-value="text" onclick="toggleDisplayMode(this)">🔤 文字呈现</div>
+      </div>
+    </div>
+
+    <!-- ② 难度 -->
+    <div class="setup-section">
+      <h3>🎯 难度 <span style="font-size:11px;color:var(--text-muted)">（可多选）</span></h3>
+      <div class="chip-group" id="difficulty-chips"></div>
+    </div>
+
+    <!-- ③ 题目数量 -->
+    <div class="setup-section">
+      <h3>🔢 题目数量</h3>
+      <div class="question-count-select" id="question-count-chips"></div>
+    </div>
+
+    <!-- ④ 语义分类 -->
+    <div class="setup-section">
+      <h3>📚 语义分类 <span style="font-size:11px;color:var(--text-muted)">（可多选）</span></h3>
+      <div class="chip-group" id="category-chips"></div>
+    </div>
+
+    <!-- ⑤ 备注筛选 -->
+    <div class="setup-section">
+      <h3>📝 备注筛选 <span style="font-size:11px;color:var(--text-muted)">（可多选，按备注内容筛选）</span></h3>
+      <div class="chip-group" id="note-chips"></div>
+    </div>
+
+    <div class="game-preview">
+      <div class="preview-info">
+        <div class="preview-item"><span class="label">可选单词</span><span class="value" id="preview-count">0</span></div>
+      </div>
+      <button class="btn-start" id="btn-start" onclick="startGame()" disabled>开始游戏</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Game ===== -->
+<div class="page" id="page-game">
+  <div class="game-container" id="game-area">
+    <div class="game-top-bar">
+      <div class="game-score">得分: <span id="score">0</span></div>
+      <div class="game-progress">第 <span id="current-q">1</span> / <span id="total-q">10</span> 题</div>
+      <button class="btn btn-outline btn-sm" onclick="quitGame()">退出</button>
+    </div>
+    <div class="word-prompt" id="word-prompt"></div>
+    <button class="play-btn" id="play-btn" onclick="playCurrentWord()">🔊</button>
+    <div id="mole-grid" class="mole-grid"></div>
+  </div>
+</div>
+
+<!-- ===== Result ===== -->
+<div class="page" id="page-result">
+  <div class="result-container">
+    <div class="result-card">
+      <div class="result-score" id="result-score">0</div>
+      <div class="result-label">总分</div>
+      <div class="result-stars" id="result-stars"></div>
+      <div class="result-details" id="result-details"></div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="startGame()">再来一局</button>
+        <button class="btn btn-outline" onclick="switchPage('game-select')">重新选择</button>
+        <button class="btn btn-outline" onclick="switchPage('admin')">回到管理</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="game-feedback" id="game-feedback"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Global Error Handler =====
+window.onerror = function(msg, url, line, col, err) {
+  const el = document.getElementById('init-error');
+  if (el) el.style.display = 'block';
+};
+
+// ===== Data =====
+let wordDatabase=[];
+const STORAGE_KEY='word_mole_v2_db';
+const PHOTO_CACHE_KEY='word_photos_v2';
+const PAGE_SIZE=50;
+let currentPage=1;
+let selectedWords=new Set();
+let selectedCategories=new Set();
+let selectedProficiencies=new Set();
+let selectedDifficulties=new Set();
+let selectedNotes=new Set();
+let questionCount=10;
+let gameWords=[];
+let currentQuestionIndex=0;
+let gameScore=0;
+let gameResults=[];
+let currentCorrectWord=null;
+let isProcessing=false;
+let gameMode='mole';
+let displayMode='image'; // 'image' or 'text'
+let isFetchingPhotos=false;
+
+// ===== Photo Cache =====
+function getPhotoCache(){
+  try{return JSON.parse(localStorage.getItem(PHOTO_CACHE_KEY)||'{}')}
+  catch(e){return{}}
+}
+function savePhotoCache(c){localStorage.setItem(PHOTO_CACHE_KEY,JSON.stringify(c))}
+function getWordPhoto(word){return getPhotoCache()[word]||null}
+function removeWordPhoto(word){const c=getPhotoCache();delete c[word];savePhotoCache(c);renderTable();updateStats()}
+
+// Fetch a single word photo from Wikipedia
+async function fetchWordPhoto(word){
+  try{
+    // Try the word as-is first, then capitalize first letter
+    const attempts=[word, word.charAt(0).toUpperCase()+word.slice(1)];
+    for(const q of attempts){
+      const r=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`);
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(d.thumbnail&&d.thumbnail.source){
+        // Get a bigger thumbnail (200px)
+        let url=d.thumbnail.source;
+        url=url.replace(/\/\d+px-/, '/200px-');
+        // Check if it's a reasonable image (not a flag, map, etc for most words)
+        return url;
+      }
+    }
+  }catch(e){console.warn('Photo fetch failed:',word,e)}
+  return null;
+}
+
+// Batch fetch photos with progress
+async function batchFetchPhotos(){
+  if(isFetchingPhotos)return;
+  isFetchingPhotos=true;
+  const cache=getPhotoCache();
+  // Fetch for words that have emoji but no photo yet
+  const needFetch=wordDatabase.filter(w=>!cache[w.word]);
+  if(needFetch.length===0){showToast('所有单词的图片已获取！');isFetchingPhotos=false;return}
+
+  const el=document.getElementById('photo-progress');
+  el.style.display='block';
+  el.innerHTML=`正在获取图片... 0/${needFetch.length}<div class="bar"><div class="bar-fill" style="width:0%"></div></div><div class="stats"><span>成功: 0</span><span>失败: 0</span></div>`;
+
+  const batchSize=5;
+  let fetched=0,success=0,fail=0;
+
+  for(let i=0;i<needFetch.length;i+=batchSize){
+    const batch=needFetch.slice(i,i+batchSize);
+    const results=await Promise.all(batch.map(async w=>{
+      const url=await fetchWordPhoto(w.word);
+      if(url){cache[w.word]=url;return true}
+      return false;
+    }));
+    success+=results.filter(r=>r).length;
+    fail+=results.filter(r=>!r).length;
+    fetched+=batch.length;
+
+    const pct=Math.round(fetched/needFetch.length*100);
+    el.innerHTML=`正在获取图片... ${fetched}/${needFetch.length} (${pct}%)<div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><div class="stats"><span>✅ 成功: ${success}</span><span>❌ 失败: ${fail}</span></div>`;
+
+    // Rate limiting - be nice to Wikipedia
+    await new Promise(r=>setTimeout(r,300));
+  }
+
+  savePhotoCache(cache);
+  el.innerHTML=`✅ 完成！成功获取 ${success} 张图片，${fail} 个词未找到<div class="bar"><div class="bar-fill" style="width:100%"></div></div>`;
+  setTimeout(()=>{el.style.display='none'},5000);
+
+  updateStats();renderTable();renderGameSelect();
+  isFetchingPhotos=false;
+}
+
+// ===== Cute Voice =====
+let cuteVoice=null;
+
+function initVoices(){
+  return new Promise(resolve=>{
+    const voices=speechSynthesis.getVoices();
+    if(voices.length>0){resolve(voices);return}
+    speechSynthesis.onvoiceschanged=()=>resolve(speechSynthesis.getVoices());
+    setTimeout(()=>resolve(speechSynthesis.getVoices()),2000);
+  });
+}
+
+function getCuteVoice(){
+  if(cuteVoice)return cuteVoice;
+  const voices=speechSynthesis.getVoices();
+  const preferred=['Samantha','Karen','Victoria','Zira','Hazel','Fiona','Moira','Tessa','Susan','Kate','Allison','Nicky','Joana','Paulina'];
+  for(const name of preferred){
+    const v=voices.find(v=>v.lang.startsWith('en-US')&&v.name.includes(name));
+    if(v){cuteVoice=v;return v}
+  }
+  const enUS=voices.filter(v=>v.lang.startsWith('en-US'));
+  if(enUS.length>0){cuteVoice=enUS[0];return cuteVoice}
+  const enAny=voices.filter(v=>v.lang.startsWith('en'));
+  if(enAny.length>0){cuteVoice=enAny[0];return cuteVoice}
+  return null;
+}
+
+function sanitize(word){
+  // Match Python sanitize_filename()
+  return word.replace(/[<>:"/\\|?*]/g,'-').replace(/'/g,'').replace(/ /g,'_').substring(0,100);
+}
+
+function playCurrentWord(){
+  if(!currentCorrectWord)return;
+  const word=currentCorrectWord.word;
+  const audioUrl='audio/'+sanitize(word)+'.mp3';
+  console.log('Trying audio:', audioUrl);
+  const audio=new Audio(audioUrl);
+  audio.oncanplaythrough=()=>{console.log('Audio OK, playing:', word);audio.play()};
+  audio.onerror=()=>{console.log('Audio load failed, fallback to speech:', audioUrl);playWithSpeech(word)};
+  audio.play().catch(e=>{console.log('Audio play failed:', e);playWithSpeech(word)});
+}
+
+function playWithSpeech(word){
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(word);
+  u.lang='en-US';u.rate=0.8;u.pitch=1.3;u.volume=1.0;
+  const v=getCuteVoice();if(v)u.voice=v;
+  speechSynthesis.speak(u);
+}
+
+// ===== Display Mode =====
+function toggleDisplayMode(el){
+  document.querySelectorAll('#display-mode-chips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  displayMode = el.dataset.value;
+  updateGamePreview();
+}
+
+// ===== Init =====
+function init(){
+  try{
+    loadData();renderTable();renderGameSelect();updateStats();initVoices();
+    // 隐藏加载提示
+    const el=document.getElementById('init-error');
+    if(el)el.style.display='none';
+  }catch(e){
+    const el=document.getElementById('init-error');
+    if(el){el.style.display='block';el.innerHTML='页面初始化出错：'+e.message+'<br>请尝试刷新页面，或联系开发者。'}
+    console.error('init error:',e);
+  }
+}
+
+function loadData(){
+  const saved=localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    wordDatabase=JSON.parse(saved);
+    wordDatabase.forEach(w=>{if(!w.difficulty)w.difficulty='中等';if(!w.note)w.note=''});
+  }else{
+    wordDatabase=DEFAULT_WORD_DATA;
+    wordDatabase.forEach(w=>{
+      if(!w.difficulty){
+        if(w.word.length<=3)w.difficulty='简单';
+        else if(w.word.length<=5)w.difficulty='中等';
+        else w.difficulty='困难';
+      }
+      if(!w.note)w.note='';
+    });
+    saveData();
+  }
+}
+function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(wordDatabase))}
+
+function updateStats(){
+  const pc=getPhotoCache();
+  const photoCount=wordDatabase.filter(w=>pc[w.word]).length;
+  document.getElementById('stat-total').textContent=wordDatabase.length;
+  document.getElementById('stat-photos').textContent=photoCount;
+  document.getElementById('stat-emoji').textContent=wordDatabase.filter(w=>w.emoji).length;
+  document.getElementById('stat-cats').textContent=new Set(wordDatabase.map(w=>w.category)).size;
+}
+
+// ===== Table =====
+function getFilteredData(){
+  const catF=document.getElementById('filter-category').value;
+  const diffF=document.getElementById('filter-difficulty').value;
+  const profF=document.getElementById('filter-proficiency').value;
+  const imgF=document.getElementById('filter-image').value;
+  const search=document.getElementById('filter-search').value.toLowerCase().trim();
+  const pc=getPhotoCache();
+  return wordDatabase.filter(w=>{
+    if(catF&&w.category!==catF)return false;
+    if(diffF&&w.difficulty!==diffF)return false;
+    if(profF&&w.proficiency!==profF)return false;
+    if(imgF==='photo'&&!pc[w.word])return false;
+    if(imgF==='emoji'&&!w.emoji)return false;
+    if(imgF==='none'&&(pc[w.word]||w.emoji))return false;
+    if(search&&!w.word.toLowerCase().includes(search)&&!(w.note&&w.note.toLowerCase().includes(search)))return false;
+    return true;
+  });
+}
+
+function renderTable(){
+  const data=getFilteredData();
+  const totalPages=Math.ceil(data.length/PAGE_SIZE);
+  if(currentPage>totalPages)currentPage=Math.max(1,totalPages);
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pageData=data.slice(start,start+PAGE_SIZE);
+
+  // Refresh category filter
+  const catSelect=document.getElementById('filter-category');
+  const curCat=catSelect.value;
+  const cats=[...new Set(wordDatabase.map(w=>w.category))].sort();
+  catSelect.innerHTML='<option value="">全部分类</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  catSelect.value=curCat;
+
+  // Bulk category
+  const bCat=document.getElementById('bulk-category');
+  bCat.innerHTML='<option value="">不修改</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  const pc=getPhotoCache();
+  const tbody=document.getElementById('table-body');
+  tbody.innerHTML=pageData.map(w=>{
+    const gi=wordDatabase.indexOf(w);
+    const chk=selectedWords.has(gi)?'checked':'';
+    const cc=getCategoryColor(w.category);
+    const photo=pc[w.word];
+    const photoHtml=photo
+      ?`<img src="${photo}" alt="${w.word}" loading="lazy" onerror="this.outerHTML='<span class=\\'no-photo\\'>❌</span>'"><button class="remove-photo" onclick="event.stopPropagation();removeWordPhoto('${w.word}')" title="移除照片">✕</button>`
+      :`<span class="no-photo">—</span>`;
+    return`<tr>
+      <td><input type="checkbox" ${chk} onchange="toggleWord(${gi})"></td>
+      <td class="photo-cell">${photoHtml}</td>
+      <td class="emoji-cell">${w.emoji||'—'}</td>
+      <td class="word-cell">${w.word}</td>
+      <td><span class="category-tag" style="background:${cc.bg};color:${cc.text}">${w.category}</span></td>
+      <td><span class="difficulty-tag difficulty-${w.difficulty||'中等'}">${w.difficulty||'中等'}</span></td>
+      <td><select class="edit-select" onchange="updateField(${gi},'proficiency',this.value)">
+        <option value="未学习" ${w.proficiency==='未学习'?'selected':''}>未学习</option>
+        <option value="认识" ${w.proficiency==='认识'?'selected':''}>认识</option>
+        <option value="熟悉" ${w.proficiency==='熟悉'?'selected':''}>熟悉</option>
+        <option value="掌握" ${w.proficiency==='掌握'?'selected':''}>掌握</option>
+      </select></td>
+      <td><input class="edit-input" value="${(w.note||'').replace(/"/g,'&quot;')}" onchange="updateField(${gi},'note',this.value)" placeholder="添加备注..."></td>
+    </tr>`;
+  }).join('');
+
+  renderPagination(totalPages);
+  updateBulkActions();
+}
+
+function renderPagination(totalPages){
+  const c=document.getElementById('pagination');
+  if(totalPages<=1){c.innerHTML='';return}
+  let h=`<button ${currentPage<=1?'disabled':''} onclick="currentPage--;renderTable()">‹</button>`;
+  const s=Math.max(1,currentPage-2),e=Math.min(totalPages,currentPage+2);
+  if(s>1)h+=`<button onclick="currentPage=1;renderTable()">1</button>`;
+  if(s>2)h+='<span>…</span>';
+  for(let i=s;i<=e;i++)h+=`<button class="${i===currentPage?'active':''}" onclick="currentPage=${i};renderTable()">${i}</button>`;
+  if(e<totalPages-1)h+='<span>…</span>';
+  if(e<totalPages)h+=`<button onclick="currentPage=${totalPages};renderTable()">${totalPages}</button>`;
+  h+=`<button ${currentPage>=totalPages?'disabled':''} onclick="currentPage++;renderTable()">›</button>`;
+  h+=`<span style="font-size:12px;color:var(--text-muted);margin-left:6px">共${getFilteredData().length}词</span>`;
+  c.innerHTML=h;
+}
+
+function getCategoryColor(cat){
+  const C=[{bg:'#FFEEE0',text:'#E65100'},{bg:'#E8F5E9',text:'#2E7D32'},{bg:'#E3F2FD',text:'#1565C0'},{bg:'#FFF3E0',text:'#EF6C00'},{bg:'#FCE4EC',text:'#C62828'},{bg:'#F3E5F5',text:'#7B1FA2'},{bg:'#E0F7FA',text:'#00838F'},{bg:'#FFF8E1',text:'#F57F17'},{bg:'#EFEBE9',text:'#4E342E'},{bg:'#E8EAF6',text:'#283593'}];
+  return C[cat.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%C.length];
+}
+
+function toggleWord(i){if(selectedWords.has(i))selectedWords.delete(i);else selectedWords.add(i);updateBulkActions();renderTable()}
+function toggleSelectAll(){
+  const checked=document.getElementById('select-all').checked;
+  getFilteredData().forEach(w=>{const i=wordDatabase.indexOf(w);if(checked)selectedWords.add(i);else selectedWords.delete(i)});
+  renderTable();
+}
+function updateBulkActions(){const n=selectedWords.size;document.getElementById('bulk-count').textContent=n;document.getElementById('bulk-actions').style.display=n>0?'flex':'none'}
+function clearSelection(){selectedWords.clear();document.getElementById('select-all').checked=false;renderTable()}
+
+function bulkSetCategory(){const v=document.getElementById('bulk-category').value;if(!v)return showToast('请选择分类');selectedWords.forEach(i=>{wordDatabase[i].category=v});saveData();updateStats();showToast(`已将${selectedWords.size}个词设为"${v}"`);renderTable()}
+function bulkSetDifficulty(){const v=document.getElementById('bulk-difficulty').value;selectedWords.forEach(i=>{wordDatabase[i].difficulty=v});saveData();showToast(`已将${selectedWords.size}个词设为"${v}"`);renderTable()}
+function bulkSetProficiency(){const v=document.getElementById('bulk-proficiency').value;selectedWords.forEach(i=>{wordDatabase[i].proficiency=v});saveData();updateStats();showToast(`已将${selectedWords.size}个词设为"${v}"`);renderTable()}
+
+function updateField(i,field,v){wordDatabase[i][field]=v;saveData();updateStats()}
+
+// ===== Excel Import/Export =====
+function exportExcel(){
+  if(typeof XLSX==='undefined'){showToast('Excel库加载中，请稍后重试');return}
+  const pc=getPhotoCache();
+  const data=wordDatabase.map(w=>({'单词':w.word,'语义分类':w.category,'难度':w.difficulty||'中等','熟练度':w.proficiency,'备注':w.note||'','Emoji':w.emoji||'','照片URL':pc[w.word]||''}));
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=[{wch:18},{wch:14},{wch:8},{wch:10},{wch:20},{wch:6},{wch:40}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'词库');
+  XLSX.writeFile(wb,'单词词库.xlsx');showToast('Excel导出成功！');
+}
+
+function exportJSON(){
+  const pc=getPhotoCache();
+  const data=wordDatabase.map(w=>({...w,photoUrl:pc[w.word]||''}));
+  const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='word_database.json';a.click();
+  showToast('JSON导出成功！');
+}
+
+function handleImport(e){
+  const f=e.target.files[0];if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){
+    if(typeof XLSX==='undefined'){showToast('Excel库加载中，请稍后重试');e.target.value='';return}
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws);
+        if(rows.length===0){showToast('文件为空');return}
+        const pc=getPhotoCache();
+        const imported=rows.map(r=>{
+          const word=(r['单词']||r['word']||r['Word']||'').toString().trim().toLowerCase();
+          const category=r['语义分类']||r['分类']||r['category']||r['Category']||'';
+          const difficulty=r['难度']||r['difficulty']||r['Difficulty']||'中等';
+          const proficiency=r['熟练度']||r['proficiency']||r['Proficiency']||'未学习';
+          const note=r['备注']||r['note']||r['Note']||'';
+          const emoji=r['Emoji']||r['emoji']||'';
+          const photoUrl=r['照片URL']||r['photoUrl']||r['photo_url']||'';
+          if(photoUrl)pc[word]=photoUrl;
+          const validDiff=['简单','中等','困难'];const diff=validDiff.includes(difficulty)?difficulty:'中等';
+          const validProf=['未学习','认识','熟悉','掌握'];const prof=validProf.includes(proficiency)?proficiency:'未学习';
+          return{word,emoji,category:category.toString(),difficulty:diff,proficiency:prof,note:note.toString()};
+        }).filter(w=>w.word);
+        if(imported.length===0){showToast('未找到有效数据，请检查表头格式');return}
+        // 增量更新：以单词为key合并
+        let addCount=0, updateCount=0;
+        imported.forEach(nw=>{
+          const existIdx=wordDatabase.findIndex(w=>w.word===nw.word);
+          if(existIdx>=0){
+            if(nw.emoji)wordDatabase[existIdx].emoji=nw.emoji;
+            if(nw.category)wordDatabase[existIdx].category=nw.category;
+            if(nw.difficulty)wordDatabase[existIdx].difficulty=nw.difficulty;
+            if(nw.proficiency)wordDatabase[existIdx].proficiency=nw.proficiency;
+            if(nw.note!==undefined&&nw.note!=='')wordDatabase[existIdx].note=nw.note;
+            updateCount++;
+          }else{
+            wordDatabase.push(nw);
+            addCount++;
+          }
+        });
+        savePhotoCache(pc);saveData();updateStats();renderTable();renderGameSelect();
+        showToast(`Excel导入成功！新增${addCount}个，更新${updateCount}个`);
+      }catch(err){showToast('Excel导入失败: '+err.message)}
+    };
+    reader.readAsArrayBuffer(f);
+  }else{
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(Array.isArray(d)&&d.length>0&&d[0].word){
+          const pc=getPhotoCache();
+          d.forEach(w=>{if(!w.difficulty)w.difficulty='中等';if(!w.note)w.note='';
+            if(w.photoUrl){pc[w.word]=w.photoUrl;delete w.photoUrl}
+          });
+          savePhotoCache(pc);
+          // 增量更新：以单词为key合并
+          let addCount=0, updateCount=0;
+          d.forEach(nw=>{
+            const existIdx=wordDatabase.findIndex(w=>w.word===nw.word);
+            if(existIdx>=0){
+              if(nw.emoji)wordDatabase[existIdx].emoji=nw.emoji;
+              if(nw.category)wordDatabase[existIdx].category=nw.category;
+              if(nw.difficulty)wordDatabase[existIdx].difficulty=nw.difficulty;
+              if(nw.proficiency)wordDatabase[existIdx].proficiency=nw.proficiency;
+              if(nw.note!==undefined&&nw.note!=='')wordDatabase[existIdx].note=nw.note;
+              updateCount++;
+            }else{
+              wordDatabase.push(nw);
+              addCount++;
+            }
+          });
+          saveData();updateStats();renderTable();renderGameSelect();
+          showToast(`JSON导入成功！新增${addCount}个，更新${updateCount}个`);
+        }else showToast('文件格式不正确');
+      }catch(err){showToast('JSON导入失败')}
+    };
+    reader.readAsText(f);
+  }
+  e.target.value='';
+}
+
+// ===== Game Select =====
+function renderGameSelect(){
+  const cats=[...new Set(wordDatabase.map(w=>w.category))].sort();
+  const diffs=['简单','中等','困难'];
+
+  let catH='<div class="chip chip-select-all" onclick="toggleAllCats(this)">全选</div>';
+  cats.forEach(c=>{const n=wordDatabase.filter(w=>w.category===c).length;catH+=`<div class="chip" data-cat="${c}" onclick="toggleCat(this,'${c}')">${c}<span class="count">${n}</span></div>`});
+  document.getElementById('category-chips').innerHTML=catH;
+
+  let diffH='<div class="chip chip-select-all" onclick="toggleAllDiffs(this)">全选</div>';
+  diffs.forEach(d=>{const n=wordDatabase.filter(w=>w.difficulty===d).length;
+    const color=d==='简单'?'🟢':d==='中等'?'🟡':'🔴';
+    diffH+=`<div class="chip" data-diff="${d}" onclick="toggleDiff(this,'${d}')">${color} ${d}<span class="count">${n}</span></div>`});
+  document.getElementById('difficulty-chips').innerHTML=diffH;
+
+  const counts=[5,10,15,20];
+  let qH='<label>每局题数:</label>';
+  counts.forEach(n=>{qH+=`<div class="chip ${n===questionCount?'selected':''}" onclick="setQCount(${n},this)">${n}题</div>`});
+  document.getElementById('question-count-chips').innerHTML=qH;
+
+  // 备注筛选 chips
+  const notes=[...new Set(wordDatabase.map(w=>w.note||'').filter(n=>n))].sort();
+  const noteChips=document.getElementById('note-chips');
+  if(noteChips){
+    let noteH='<div class="chip chip-select-all">全选</div>';
+    notes.forEach(n=>{
+      const cnt=wordDatabase.filter(w=>w.note===n).length;
+      const safeN=n.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      noteH+=`<div class="chip" data-note="${safeN}">${n}<span class="count">${cnt}</span></div>`;
+    });
+    noteChips.innerHTML=noteH;
+    noteChips.querySelector('.chip-select-all').onclick=function(){toggleAllNotes(this)};
+    noteChips.querySelectorAll('.chip:not(.chip-select-all)').forEach(el=>{el.onclick=function(){toggleNote(this)}});
+  }
+
+  updateGamePreview();
+}
+
+function toggleCat(el,c){el.classList.toggle('selected');selectedCategories.has(c)?selectedCategories.delete(c):selectedCategories.add(c);updateGamePreview()}
+function toggleAllCats(el){el.classList.toggle('selected');const chips=document.querySelectorAll('#category-chips .chip:not(.chip-select-all)');if(el.classList.contains('selected')){selectedCategories.clear();chips.forEach(c=>{c.classList.add('selected');selectedCategories.add(c.dataset.cat)})}else{selectedCategories.clear();chips.forEach(c=>c.classList.remove('selected'))}updateGamePreview()}
+function toggleProf(el,p){el.classList.toggle('selected');selectedProficiencies.has(p)?selectedProficiencies.delete(p):selectedProficiencies.add(p);updateGamePreview()}
+function toggleAllProfs(el){el.classList.toggle('selected');const chips=document.querySelectorAll('#proficiency-chips .chip:not(.chip-select-all)');if(el.classList.contains('selected')){selectedProficiencies.clear();chips.forEach(c=>{c.classList.add('selected');selectedProficiencies.add(c.dataset.prof)})}else{selectedProficiencies.clear();chips.forEach(c=>c.classList.remove('selected'))}updateGamePreview()}
+function toggleDiff(el,d){el.classList.toggle('selected');selectedDifficulties.has(d)?selectedDifficulties.delete(d):selectedDifficulties.add(d);updateGamePreview()}
+function toggleAllDiffs(el){el.classList.toggle('selected');const chips=document.querySelectorAll('#difficulty-chips .chip:not(.chip-select-all)');if(el.classList.contains('selected')){selectedDifficulties.clear();chips.forEach(c=>{c.classList.add('selected');selectedDifficulties.add(c.dataset.diff)})}else{selectedDifficulties.clear();chips.forEach(c=>c.classList.remove('selected'))}updateGamePreview()}
+function setQCount(n,el){questionCount=n;document.querySelectorAll('#question-count-chips .chip').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');updateGamePreview()}
+
+function toggleNote(el){
+  el.classList.toggle('selected');
+  const note=el.dataset.note;
+  if(selectedNotes.has(note))selectedNotes.delete(note);else selectedNotes.add(note);
+  updateGamePreview();
+}
+function toggleAllNotes(el){
+  el.classList.toggle('selected');
+  const chips=document.querySelectorAll('#note-chips .chip:not(.chip-select-all)');
+  if(el.classList.contains('selected')){
+    selectedNotes.clear();
+    chips.forEach(c=>{c.classList.add('selected');selectedNotes.add(c.dataset.note)});
+  }else{
+    selectedNotes.clear();
+    chips.forEach(c=>c.classList.remove('selected'));
+  }
+  updateGamePreview();
+}
+
+function getSelectedWords(){
+  return wordDatabase.filter(w=>
+    (selectedCategories.size===0||selectedCategories.has(w.category))&&
+    (selectedDifficulties.size===0||selectedDifficulties.has(w.difficulty))&&
+    (selectedNotes.size===0||(w.note&&selectedNotes.has(w.note)))
+  );
+}
+
+// Check if a word has a visual representation (photo or good emoji)
+function hasVisual(w){
+  const pc=getPhotoCache();
+  return !!(pc[w.word]||w.emoji);
+}
+
+function updateGamePreview(){
+  const words=getSelectedWords();
+  const pc=getPhotoCache();
+  document.getElementById('preview-count').textContent=words.length;
+
+  const btn=document.getElementById('btn-start');
+  if(words.length<2){btn.disabled=true;btn.textContent='至少选择2个词';return}
+  if(displayMode==='image'){
+    const vis=words.filter(w=>hasVisual(w)).length;
+    if(vis>=2){btn.disabled=false;btn.textContent='🐹 开始打地鼠！';gameMode='mole'}
+    else{btn.disabled=true;btn.textContent='图片模式需要至少2个有图单词'}
+  }else{
+    btn.disabled=false;btn.textContent='🎧 开始听音选词！';gameMode='pick'
+  }
+}
+
+// ===== Game =====
+function startGame(){
+  const words=getSelectedWords();
+  const pc=getPhotoCache();
+
+  if(displayMode==='image'){
+    const moleWords=words.filter(w=>hasVisual(w));
+    if(moleWords.length<2){showToast('图片模式需要至少2个有图单词');return}
+    gameMode='mole';
+    gameWords=shuffle(moleWords).slice(0,Math.min(questionCount,moleWords.length));
+  }else{
+    if(words.length<2){showToast('至少需要2个单词');return}
+    gameMode='pick';
+    gameWords=shuffle(words).slice(0,Math.min(questionCount,words.length));
+  }
+
+  currentQuestionIndex=0;gameScore=0;gameResults=[];
+  switchPage('game');showQuestion();
+}
+
+function showQuestion(){
+  if(currentQuestionIndex>=gameWords.length){showResult();return}
+  isProcessing=false;
+  currentCorrectWord=gameWords[currentQuestionIndex];
+
+  document.getElementById('score').textContent=gameScore;
+  document.getElementById('current-q').textContent=currentQuestionIndex+1;
+  document.getElementById('total-q').textContent=gameWords.length;
+  const prompt=document.getElementById('word-prompt');
+  if(displayMode==='text'){
+    prompt.innerHTML='🔊 请听声音，<u>点击这里重播</u>';
+    prompt.onclick=()=>playCurrentWord();
+    prompt.style.cursor='pointer';
+  }else{
+    prompt.textContent=currentCorrectWord.word;
+    prompt.onclick=null;
+    prompt.style.cursor='default';
+  }
+
+  const grid=document.getElementById('mole-grid');
+  if(gameMode==='mole')setupMole(grid);else setupPick(grid);
+
+  setTimeout(()=>playCurrentWord(),400);
+}
+
+function getVisualHtml(w){
+  const pc=getPhotoCache();
+  const photo=pc[w.word];
+  if(photo){
+    return `<img class="mole-photo" src="${photo}" alt="${w.word}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block">${w.emoji?`<span class="mole-emoji" style="display:none">${w.emoji}</span>`:''}`;
+  }
+  if(w.emoji){
+    return `<span class="mole-emoji">${w.emoji}</span>`;
+  }
+  return `<span class="mole-emoji" style="font-size:20px">${w.word}</span>`;
+}
+
+function setupMole(grid){
+  grid.className='mole-grid';
+  const pool=gameWords.filter(w=>w.word!==currentCorrectWord.word&&hasVisual(w));
+  const wrongs=shuffle(pool).slice(0,3);
+  const options=shuffle([currentCorrectWord,...wrongs]);
+
+  grid.innerHTML=options.map((w,i)=>`
+    <div class="mole-hole" onclick="checkAnswer('${w.word}',this)">
+      <div class="hole-top"></div>
+      <div class="mole" id="mole-${i}">
+        ${getVisualHtml(w)}
+        <div class="mole-body"></div>
+      </div>
+    </div>`).join('');
+
+  const moles=document.querySelectorAll('.mole');
+  moles.forEach(m=>m.classList.remove('show'));
+  options.forEach((_,i)=>{setTimeout(()=>{const m=document.getElementById('mole-'+i);if(m)m.classList.add('show')},200+i*300)});
+}
+
+function setupPick(grid){
+  grid.className='pick-grid';
+  const pool=gameWords.filter(w=>w.word!==currentCorrectWord.word);
+  const wrongs=shuffle(pool).slice(0,3);
+  const options=shuffle([currentCorrectWord,...wrongs]);
+
+  grid.innerHTML=options.map(w=>
+    `<button class="pick-option" onclick="checkAnswer('${w.word}',this)">
+      <span class="pick-text">${w.word}</span>
+    </button>`
+  ).join('');
+}
+
+function checkAnswer(word,el){
+  if(isProcessing)return;isProcessing=true;
+  const correct=word===currentCorrectWord.word;
+  gameResults.push({word:currentCorrectWord.word,emoji:currentCorrectWord.emoji,category:currentCorrectWord.category,difficulty:currentCorrectWord.difficulty,correct});
+
+  if(correct){
+    gameScore+=10;showFeedback('🎉');playSound('correct');
+    const idx=wordDatabase.findIndex(w=>w.word===currentCorrectWord.word);
+    if(idx>=0){const o=['未学习','认识','熟悉','掌握'];const ci=o.indexOf(wordDatabase[idx].proficiency);if(ci<o.length-1){wordDatabase[idx].proficiency=o[ci+1];saveData()}}
+  }else{
+    showFeedback('😮');playSound('wrong');
+    const idx=wordDatabase.findIndex(w=>w.word===currentCorrectWord.word);
+    if(idx>=0){const o=['未学习','认识','熟悉','掌握'];const ci=o.indexOf(wordDatabase[idx].proficiency);if(ci>0){wordDatabase[idx].proficiency=o[ci-1];saveData()}}
+  }
+
+  document.getElementById('score').textContent=gameScore;
+
+  const mole=el.querySelector('.mole');
+  if(mole)mole.classList.add(correct?'correct':'wrong');
+  else{el.style.borderColor=correct?'var(--success)':'var(--danger)';el.style.background=correct?'#e8f5e9':'#ffebee'}
+
+  setTimeout(()=>{currentQuestionIndex++;showQuestion()},1200);
+}
+
+function showFeedback(e){const c=document.getElementById('game-feedback');c.innerHTML=`<div class="feedback-emoji">${e}</div>`;setTimeout(()=>{c.innerHTML=''},900)}
+
+function playSound(type){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();const g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);
+    if(type==='correct'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(523,ctx.currentTime);
+      osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);
+      osc.frequency.setValueAtTime(784,ctx.currentTime+0.2);
+      g.gain.setValueAtTime(0.2,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.4);
+      osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.4);
+    }else{
+      osc.type='triangle';
+      osc.frequency.setValueAtTime(300,ctx.currentTime);
+      osc.frequency.setValueAtTime(200,ctx.currentTime+0.15);
+      g.gain.setValueAtTime(0.2,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.3);
+      osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.3);
+    }
+  }catch(e){}
+}
+
+function showResult(){
+  switchPage('result');
+  const pc=getPhotoCache();
+  const total=gameResults.length;
+  const correctC=gameResults.filter(r=>r.correct).length;
+  const pct=Math.round(correctC/total*100);
+
+  document.getElementById('result-score').textContent=gameScore;
+  const stars=pct>=90?3:pct>=60?2:pct>=30?1:0;
+  document.getElementById('result-stars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);
+
+  document.getElementById('result-details').innerHTML=gameResults.map(r=>{
+    const photo=pc[r.word];
+    const img=photo?`<img class="rw-img" src="${photo}" alt="${r.word}" onerror="this.outerHTML='<span class=\\'rw-emoji\\'>${r.emoji||'📝'}</span>'">`:`<span class="rw-emoji">${r.emoji||'📝'}</span>`;
+    return`<div class="result-word">
+      ${img}
+      <span class="word">${r.word}</span>
+      <span style="font-size:10px;color:var(--text-muted)">${r.difficulty||''}</span>
+      <span class="status" style="background:${r.correct?'#e8f5e9':'#ffebee'};color:${r.correct?'#2e7d32':'#c62828'}">
+        ${r.correct?'✓ 正确':'✗ 再练练'}
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function quitGame(){if(confirm('确定退出游戏吗？'))switchPage('game-select')}
+
+// ===== Utils =====
+function switchPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    t.classList.remove('active');
+    if((id==='admin'&&t.dataset.page==='admin')||((id==='game-select'||id==='game'||id==='result')&&t.dataset.page==='game-select'))t.classList.add('active');
+  });
+  if(id==='admin')renderTable();
+}
+
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+const DEFAULT_WORD_DATA=[{"word": "mom", "emoji": "👩", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "dad", "emoji": "👨", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "baby", "emoji": "👶", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "boy", "emoji": "👦", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "girl", "emoji": "👧", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "grandma", "emoji": "👵", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "grandpa", "emoji": "👴", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "brother", "emoji": "👦", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "sister", "emoji": "👧", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "family", "emoji": "👨‍👩‍👧‍👦", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "head", "emoji": "🧑", "category": "身体部位", "proficiency": "未学习"}, {"word": "hair", "emoji": "💇", "category": "身体部位", "proficiency": "未学习"}, {"word": "eye", "emoji": "👁️", "category": "身体部位", "proficiency": "未学习"}, {"word": "ear", "emoji": "👂", "category": "身体部位", "proficiency": "未学习"}, {"word": "nose", "emoji": "👃", "category": "身体部位", "proficiency": "未学习"}, {"word": "mouth", "emoji": "👄", "category": "身体部位", "proficiency": "未学习"}, {"word": "hand", "emoji": "✋", "category": "身体部位", "proficiency": "未学习"}, {"word": "foot", "emoji": "🦶", "category": "身体部位", "proficiency": "未学习"}, {"word": "leg", "emoji": "🦵", "category": "身体部位", "proficiency": "未学习"}, {"word": "arm", "emoji": "💪", "category": "身体部位", "proficiency": "未学习"}, {"word": "body", "emoji": "🧍", "category": "身体部位", "proficiency": "未学习"}, {"word": "cat", "emoji": "🐱", "category": "动物", "proficiency": "未学习"}, {"word": "dog", "emoji": "🐶", "category": "动物", "proficiency": "未学习"}, {"word": "bird", "emoji": "🐦", "category": "动物", "proficiency": "未学习"}, {"word": "fish", "emoji": "🐟", "category": "动物", "proficiency": "未学习"}, {"word": "rabbit", "emoji": "🐰", "category": "动物", "proficiency": "未学习"}, {"word": "duck", "emoji": "🦆", "category": "动物", "proficiency": "未学习"}, {"word": "chicken", "emoji": "🐔", "category": "动物", "proficiency": "未学习"}, {"word": "pig", "emoji": "🐷", "category": "动物", "proficiency": "未学习"}, {"word": "cow", "emoji": "🐮", "category": "动物", "proficiency": "未学习"}, {"word": "horse", "emoji": "🐴", "category": "动物", "proficiency": "未学习"}, {"word": "apple", "emoji": "🍎", "category": "水果", "proficiency": "未学习"}, {"word": "banana", "emoji": "🍌", "category": "水果", "proficiency": "未学习"}, {"word": "orange", "emoji": "🍊", "category": "水果", "proficiency": "未学习"}, {"word": "grape", "emoji": "🍇", "category": "水果", "proficiency": "未学习"}, {"word": "bread", "emoji": "🍞", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "cake", "emoji": "🎂", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "egg", "emoji": "🥚", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "milk", "emoji": "🥛", "category": "饮品", "proficiency": "未学习"}, {"word": "juice", "emoji": "🧃", "category": "饮品", "proficiency": "未学习"}, {"word": "water", "emoji": "💧", "category": "饮品", "proficiency": "未学习"}, {"word": "rice", "emoji": "🍚", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "book", "emoji": "📖", "category": "学校与文具", "proficiency": "未学习"}, {"word": "pencil", "emoji": "✏️", "category": "学校与文具", "proficiency": "未学习"}, {"word": "bag", "emoji": "🎒", "category": "其他物品", "proficiency": "未学习"}, {"word": "desk", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "chair", "emoji": "🪑", "category": "未分类", "proficiency": "未学习"}, {"word": "table", "emoji": "🪑", "category": "未分类", "proficiency": "未学习"}, {"word": "bed", "emoji": "🛏️", "category": "未分类", "proficiency": "未学习"}, {"word": "door", "emoji": "🚪", "category": "家居与房间", "proficiency": "未学习"}, {"word": "window", "emoji": "🪟", "category": "家居与房间", "proficiency": "未学习"}, {"word": "light", "emoji": "💡", "category": "未分类", "proficiency": "未学习"}, {"word": "TV", "emoji": "", "category": "其他物品", "proficiency": "未学习"}, {"word": "toy", "emoji": "🧸", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "ball", "emoji": "⚽", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "car", "emoji": "🚗", "category": "交通工具", "proficiency": "未学习"}, {"word": "sun", "emoji": "☀️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "moon", "emoji": "🌙", "category": "自然与天气", "proficiency": "未学习"}, {"word": "star", "emoji": "⭐", "category": "自然与天气", "proficiency": "未学习"}, {"word": "tree", "emoji": "🌳", "category": "自然与天气", "proficiency": "未学习"}, {"word": "flower", "emoji": "🌸", "category": "自然与天气", "proficiency": "未学习"}, {"word": "sky", "emoji": "🌤️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "cloud", "emoji": "☁️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "run", "emoji": "🏃", "category": "动作", "proficiency": "未学习"}, {"word": "jump", "emoji": "🦘", "category": "动作", "proficiency": "未学习"}, {"word": "walk", "emoji": "🚶", "category": "动作", "proficiency": "未学习"}, {"word": "sit", "emoji": "🪑", "category": "动作", "proficiency": "未学习"}, {"word": "stand", "emoji": "🧍", "category": "动作", "proficiency": "未学习"}, {"word": "eat", "emoji": "🍽️", "category": "动作", "proficiency": "未学习"}, {"word": "drink", "emoji": "🥤", "category": "动作", "proficiency": "未学习"}, {"word": "sleep", "emoji": "😴", "category": "动作", "proficiency": "未学习"}, {"word": "play", "emoji": "🎮", "category": "动作", "proficiency": "未学习"}, {"word": "sing", "emoji": "🎤", "category": "动作", "proficiency": "未学习"}, {"word": "dance", "emoji": "💃", "category": "动作", "proficiency": "未学习"}, {"word": "open", "emoji": "👐", "category": "动作", "proficiency": "未学习"}, {"word": "close", "emoji": "✊", "category": "动作", "proficiency": "未学习"}, {"word": "go", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "come", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "look", "emoji": "👀", "category": "动作", "proficiency": "未学习"}, {"word": "see", "emoji": "👀", "category": "动作", "proficiency": "未学习"}, {"word": "listen", "emoji": "👂", "category": "动作", "proficiency": "未学习"}, {"word": "big", "emoji": "🐘", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "small", "emoji": "🐭", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "tall", "emoji": "🦒", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "short", "emoji": "📏", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "happy", "emoji": "😊", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "sad", "emoji": "😢", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "hot", "emoji": "🥵", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "cold", "emoji": "🥶", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "good", "emoji": "👍", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "new", "emoji": "✨", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "one", "emoji": "1️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "two", "emoji": "2️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "three", "emoji": "3️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "four", "emoji": "4️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "five", "emoji": "5️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "red", "emoji": "🔴", "category": "颜色", "proficiency": "未学习"}, {"word": "blue", "emoji": "🔵", "category": "颜色", "proficiency": "未学习"}, {"word": "yellow", "emoji": "🟡", "category": "颜色", "proficiency": "未学习"}, {"word": "green", "emoji": "🟢", "category": "颜色", "proficiency": "未学习"}, {"word": "a", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "the", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "I", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "you", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "is", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "am", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "are", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "my", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "your", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "this", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "that", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "yes", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "no", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "in", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "on", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "under", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "sheep", "emoji": "🐑", "category": "动物", "proficiency": "未学习"}, {"word": "monkey", "emoji": "🐵", "category": "动物", "proficiency": "未学习"}, {"word": "elephant", "emoji": "🐘", "category": "动物", "proficiency": "未学习"}, {"word": "tiger", "emoji": "🐯", "category": "动物", "proficiency": "未学习"}, {"word": "lion", "emoji": "🦁", "category": "动物", "proficiency": "未学习"}, {"word": "bear", "emoji": "🐻", "category": "动物", "proficiency": "未学习"}, {"word": "frog", "emoji": "🐸", "category": "动物", "proficiency": "未学习"}, {"word": "butterfly", "emoji": "🦋", "category": "动物", "proficiency": "未学习"}, {"word": "ant", "emoji": "🐜", "category": "动物", "proficiency": "未学习"}, {"word": "bee", "emoji": "🐝", "category": "动物", "proficiency": "未学习"}, {"word": "strawberry", "emoji": "🍓", "category": "水果", "proficiency": "未学习"}, {"word": "watermelon", "emoji": "🍉", "category": "水果", "proficiency": "未学习"}, {"word": "cookie", "emoji": "🍪", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "cheese", "emoji": "🧀", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "pizza", "emoji": "🍕", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "hamburger", "emoji": "🍔", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "pillow", "emoji": "🛌", "category": "家居与房间", "proficiency": "未学习"}, {"word": "clock", "emoji": "🕐", "category": "家居与房间", "proficiency": "未学习"}, {"word": "phone", "emoji": "📱", "category": "家居与房间", "proficiency": "未学习"}, {"word": "doll", "emoji": "", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "truck", "emoji": "🚚", "category": "交通工具", "proficiency": "未学习"}, {"word": "bike", "emoji": "🚲", "category": "交通工具", "proficiency": "未学习"}, {"word": "grass", "emoji": "🌿", "category": "自然与天气", "proficiency": "未学习"}, {"word": "rain", "emoji": "🌧️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "snow", "emoji": "❄️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "draw", "emoji": "🎨", "category": "动作", "proficiency": "未学习"}, {"word": "read", "emoji": "📖", "category": "动作", "proficiency": "未学习"}, {"word": "turnon", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "turnoff", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "give", "emoji": "🤲", "category": "动作", "proficiency": "未学习"}, {"word": "take", "emoji": "✊", "category": "动作", "proficiency": "未学习"}, {"word": "hear", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "touch", "emoji": "👆", "category": "动作", "proficiency": "未学习"}, {"word": "smell", "emoji": "👃", "category": "动作", "proficiency": "未学习"}, {"word": "taste", "emoji": "👅", "category": "动作", "proficiency": "未学习"}, {"word": "hug", "emoji": "🤗", "category": "动作", "proficiency": "未学习"}, {"word": "kiss", "emoji": "😘", "category": "动作", "proficiency": "未学习"}, {"word": "long", "emoji": "📏", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "fast", "emoji": "⚡", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "slow", "emoji": "🦥", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "bad", "emoji": "👎", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "old", "emoji": "👴", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "clean", "emoji": "✨", "category": "动作", "proficiency": "未学习"}, {"word": "dirty", "emoji": "🤮", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "six", "emoji": "6️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "seven", "emoji": "7️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "eight", "emoji": "8️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "nine", "emoji": "9️⃣", "category": "数字", "proficiency": "未学习"}, {"word": "ten", "emoji": "🔟", "category": "数字", "proficiency": "未学习"}, {"word": "purple", "emoji": "🟣", "category": "颜色", "proficiency": "未学习"}, {"word": "black", "emoji": "⚫", "category": "颜色", "proficiency": "未学习"}, {"word": "white", "emoji": "⚪", "category": "颜色", "proficiency": "未学习"}, {"word": "brown", "emoji": "🟤", "category": "颜色", "proficiency": "未学习"}, {"word": "pink", "emoji": "🩷", "category": "颜色", "proficiency": "未学习"}, {"word": "gray", "emoji": "🔘", "category": "颜色", "proficiency": "未学习"}, {"word": "an", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "he", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "she", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "it", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "can", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "do", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "say", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "like", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "have", "emoji": "", "category": "动词与助动词", "proficiency": "未学习"}, {"word": "here", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "there", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "up", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "down", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "clothes", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "shirt", "emoji": "👔", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "T-shirt", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "dress", "emoji": "👗", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "skirt", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "pants", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "jeans", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "shorts", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "sweater", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "jacket", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "coat", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "hat", "emoji": "🧢", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "cap", "emoji": "🧢", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "scarf", "emoji": "🧣", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "gloves", "emoji": "🧤", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "socks", "emoji": "🧦", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "shoes", "emoji": "👟", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "boots", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "sneakers", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "glasses", "emoji": "👓", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "watch", "emoji": "⌚", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "backpack", "emoji": "🎒", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "house", "emoji": "🏠", "category": "家居与房间", "proficiency": "未学习"}, {"word": "home", "emoji": "🏠", "category": "家居与房间", "proficiency": "未学习"}, {"word": "room", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "livingroom", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "bedroom", "emoji": "🛏️", "category": "家居与房间", "proficiency": "未学习"}, {"word": "kitchen", "emoji": "🍳", "category": "家居与房间", "proficiency": "未学习"}, {"word": "bathroom", "emoji": "🛁", "category": "家居与房间", "proficiency": "未学习"}, {"word": "sofa", "emoji": "🛋️", "category": "家居与房间", "proficiency": "未学习"}, {"word": "shelf", "emoji": "📚", "category": "家居与房间", "proficiency": "未学习"}, {"word": "cabinet", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "lamp", "emoji": "💡", "category": "家居与房间", "proficiency": "未学习"}, {"word": "mirror", "emoji": "🪞", "category": "家居与房间", "proficiency": "未学习"}, {"word": "computer", "emoji": "💻", "category": "家居与房间", "proficiency": "未学习"}, {"word": "school", "emoji": "🏫", "category": "学校与文具", "proficiency": "未学习"}, {"word": "classroom", "emoji": "", "category": "学校与文具", "proficiency": "未学习"}, {"word": "teacher", "emoji": "👩‍🏫", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "student", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "class", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "lesson", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "notebook", "emoji": "📓", "category": "学校与文具", "proficiency": "未学习"}, {"word": "pen", "emoji": "🖊️", "category": "学校与文具", "proficiency": "未学习"}, {"word": "eraser", "emoji": "🧹", "category": "学校与文具", "proficiency": "未学习"}, {"word": "ruler", "emoji": "📏", "category": "学校与文具", "proficiency": "未学习"}, {"word": "crayon", "emoji": "🖍️", "category": "学校与文具", "proficiency": "未学习"}, {"word": "marker", "emoji": "🖊️", "category": "学校与文具", "proficiency": "未学习"}, {"word": "blackboard", "emoji": "📋", "category": "学校与文具", "proficiency": "未学习"}, {"word": "whiteboard", "emoji": "📋", "category": "学校与文具", "proficiency": "未学习"}, {"word": "library", "emoji": "📚", "category": "学校与文具", "proficiency": "未学习"}, {"word": "playground", "emoji": "🎠", "category": "学校与文具", "proficiency": "未学习"}, {"word": "bus", "emoji": "🚌", "category": "交通工具", "proficiency": "未学习"}, {"word": "van", "emoji": "", "category": "交通工具", "proficiency": "未学习"}, {"word": "motorcycle", "emoji": "🏍️", "category": "交通工具", "proficiency": "未学习"}, {"word": "train", "emoji": "🚂", "category": "交通工具", "proficiency": "未学习"}, {"word": "subway", "emoji": "🚇", "category": "交通工具", "proficiency": "未学习"}, {"word": "plane", "emoji": "✈️", "category": "交通工具", "proficiency": "未学习"}, {"word": "boat", "emoji": "⛵", "category": "交通工具", "proficiency": "未学习"}, {"word": "ship", "emoji": "🚢", "category": "交通工具", "proficiency": "未学习"}, {"word": "taxi", "emoji": "🚕", "category": "交通工具", "proficiency": "未学习"}, {"word": "ambulance", "emoji": "🚑", "category": "交通工具", "proficiency": "未学习"}, {"word": "firetruck", "emoji": "🚒", "category": "交通工具", "proficiency": "未学习"}, {"word": "policecar", "emoji": "🚓", "category": "交通工具", "proficiency": "未学习"}, {"word": "zoo", "emoji": "🦒", "category": "场所", "proficiency": "未学习"}, {"word": "panda", "emoji": "🐼", "category": "动物", "proficiency": "未学习"}, {"word": "giraffe", "emoji": "🦒", "category": "动物", "proficiency": "未学习"}, {"word": "zebra", "emoji": "🦓", "category": "动物", "proficiency": "未学习"}, {"word": "kangaroo", "emoji": "🦘", "category": "动物", "proficiency": "未学习"}, {"word": "penguin", "emoji": "🐧", "category": "动物", "proficiency": "未学习"}, {"word": "dolphin", "emoji": "🐬", "category": "动物", "proficiency": "未学习"}, {"word": "shark", "emoji": "🦈", "category": "动物", "proficiency": "未学习"}, {"word": "turtle", "emoji": "🐢", "category": "动物", "proficiency": "未学习"}, {"word": "fox", "emoji": "🦊", "category": "动物", "proficiency": "未学习"}, {"word": "wolf", "emoji": "🐺", "category": "动物", "proficiency": "未学习"}, {"word": "mouse", "emoji": "🐭", "category": "动物", "proficiency": "未学习"}, {"word": "squirrel", "emoji": "🐿️", "category": "动物", "proficiency": "未学习"}, {"word": "owl", "emoji": "🦉", "category": "动物", "proficiency": "未学习"}, {"word": "spider", "emoji": "🕷️", "category": "动物", "proficiency": "未学习"}, {"word": "ladybug", "emoji": "🐞", "category": "动物", "proficiency": "未学习"}, {"word": "vegetable", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "carrot", "emoji": "🥕", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "potato", "emoji": "🥔", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "tomato", "emoji": "🍅", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "cucumber", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "onion", "emoji": "🧅", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "broccoli", "emoji": "🥦", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "corn", "emoji": "🌽", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "pea", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "peach", "emoji": "🍑", "category": "水果", "proficiency": "未学习"}, {"word": "pear", "emoji": "🍐", "category": "水果", "proficiency": "未学习"}, {"word": "cherry", "emoji": "🍒", "category": "水果", "proficiency": "未学习"}, {"word": "mango", "emoji": "🥭", "category": "水果", "proficiency": "未学习"}, {"word": "pineapple", "emoji": "🍍", "category": "水果", "proficiency": "未学习"}, {"word": "butter", "emoji": "🧈", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "jam", "emoji": "🍓", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "yogurt", "emoji": "🥛", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "icecream", "emoji": "🍨", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "candy", "emoji": "🍬", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "chocolate", "emoji": "🍫", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "tea", "emoji": "🍵", "category": "饮品", "proficiency": "未学习"}, {"word": "eleven", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "twelve", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "thirteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "fourteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "fifteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "sixteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "seventeen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "eighteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "nineteen", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "twenty", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "thirty", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "forty", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "fifty", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "onehundred", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "morning", "emoji": "🌅", "category": "时间与日期", "proficiency": "未学习"}, {"word": "afternoon", "emoji": "🌤️", "category": "时间与日期", "proficiency": "未学习"}, {"word": "evening", "emoji": "🌆", "category": "时间与日期", "proficiency": "未学习"}, {"word": "night", "emoji": "🌃", "category": "时间与日期", "proficiency": "未学习"}, {"word": "day", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "week", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "today", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "tomorrow", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "yesterday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Monday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Tuesday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Wednesday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Thursday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Friday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Saturday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Sunday", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "over", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "above", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "below", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "nextto", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "beside", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "between", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "infrontof", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "behind", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "inside", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "outside", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "into", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "outof", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "through", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "across", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "along", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "around", "emoji": "", "category": "方位与空间", "proficiency": "未学习"}, {"word": "to", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "from", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "for", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "with", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "without", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "by", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "at", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "and", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "but", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "or", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "because", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "so", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "if", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "when", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "while", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "his", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "her", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "its", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "our", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "their", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "who", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "what", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "where", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "why", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "how", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "many", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "much", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "some", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "any", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "all", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "none", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "more", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "less", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "job", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "doctor", "emoji": "👨‍⚕️", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "nurse", "emoji": "👩‍⚕️", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "firefighter", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "policeofficer", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "pilot", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "driver", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "cook", "emoji": "👨‍🍳", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "chef", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "baker", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "farmer", "emoji": "👨‍🌾", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "worker", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "artist", "emoji": "🎨", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "musician", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "singer", "emoji": "🎤", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "dancer", "emoji": "💃", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "actor", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "writer", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "scientist", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "weather", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "sunny", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "cloudy", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "rainy", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "snowy", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "windy", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "foggy", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "warm", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "cool", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "season", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "spring", "emoji": "🌸", "category": "自然与天气", "proficiency": "未学习"}, {"word": "summer", "emoji": "☀️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "fall", "emoji": "🍂", "category": "自然与天气", "proficiency": "未学习"}, {"word": "winter", "emoji": "❄️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "January", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "February", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "March", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "April", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "May", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "June", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "July", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "August", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "September", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "October", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "November", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "December", "emoji": "", "category": "时间与日期", "proficiency": "未学习"}, {"word": "birthday", "emoji": "🎂", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Christmas", "emoji": "🎄", "category": "时间与日期", "proficiency": "未学习"}, {"word": "Halloween", "emoji": "🎃", "category": "时间与日期", "proficiency": "未学习"}, {"word": "cheek", "emoji": "😊", "category": "身体部位", "proficiency": "未学习"}, {"word": "chin", "emoji": "😦", "category": "身体部位", "proficiency": "未学习"}, {"word": "forehead", "emoji": "🧠", "category": "身体部位", "proficiency": "未学习"}, {"word": "eyebrow", "emoji": "👁️", "category": "身体部位", "proficiency": "未学习"}, {"word": "tooth", "emoji": "🦷", "category": "身体部位", "proficiency": "未学习"}, {"word": "tongue", "emoji": "👅", "category": "身体部位", "proficiency": "未学习"}, {"word": "shoulder", "emoji": "🤷", "category": "身体部位", "proficiency": "未学习"}, {"word": "elbow", "emoji": "💪", "category": "身体部位", "proficiency": "未学习"}, {"word": "wrist", "emoji": "🤲", "category": "身体部位", "proficiency": "未学习"}, {"word": "finger", "emoji": "☝️", "category": "身体部位", "proficiency": "未学习"}, {"word": "thumb", "emoji": "👍", "category": "身体部位", "proficiency": "未学习"}, {"word": "nail", "emoji": "💅", "category": "身体部位", "proficiency": "未学习"}, {"word": "back", "emoji": "🔙", "category": "身体部位", "proficiency": "未学习"}, {"word": "chest", "emoji": "🫁", "category": "身体部位", "proficiency": "未学习"}, {"word": "stomach", "emoji": "🫃", "category": "身体部位", "proficiency": "未学习"}, {"word": "neck", "emoji": "🦒", "category": "身体部位", "proficiency": "未学习"}, {"word": "knee", "emoji": "🦵", "category": "身体部位", "proficiency": "未学习"}, {"word": "ankle", "emoji": "🦶", "category": "身体部位", "proficiency": "未学习"}, {"word": "toe", "emoji": "🦶", "category": "身体部位", "proficiency": "未学习"}, {"word": "hip", "emoji": "🧍", "category": "身体部位", "proficiency": "未学习"}, {"word": "thigh", "emoji": "🦵", "category": "身体部位", "proficiency": "未学习"}, {"word": "calf", "emoji": "🦵", "category": "身体部位", "proficiency": "未学习"}, {"word": "heel", "emoji": "🦶", "category": "身体部位", "proficiency": "未学习"}, {"word": "lettuce", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "bean", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "plum", "emoji": "🔵", "category": "水果", "proficiency": "未学习"}, {"word": "coconut", "emoji": "🥥", "category": "水果", "proficiency": "未学习"}, {"word": "cereal", "emoji": "🥣", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "coffee", "emoji": "☕", "category": "饮品", "proficiency": "未学习"}, {"word": "soda", "emoji": "", "category": "饮品", "proficiency": "未学习"}, {"word": "soup", "emoji": "🍲", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "salad", "emoji": "🥗", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "sandwich", "emoji": "🥪", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "noodle", "emoji": "🍜", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "meat", "emoji": "🥩", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "beef", "emoji": "🥩", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "pork", "emoji": "🥓", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "seafood", "emoji": "🦐", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "toothbrush", "emoji": "🪥", "category": "家居与房间", "proficiency": "未学习"}, {"word": "toothpaste", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "soap", "emoji": "🧼", "category": "家居与房间", "proficiency": "未学习"}, {"word": "towel", "emoji": "🧴", "category": "家居与房间", "proficiency": "未学习"}, {"word": "toilet", "emoji": "🚽", "category": "家居与房间", "proficiency": "未学习"}, {"word": "paper", "emoji": "📄", "category": "学校与文具", "proficiency": "未学习"}, {"word": "plate", "emoji": "🍽️", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "bowl", "emoji": "🥣", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "cup", "emoji": "🥤", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "fork", "emoji": "🍴", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "knife", "emoji": "🔪", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "spoon", "emoji": "🥄", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "key", "emoji": "🔑", "category": "其他物品", "proficiency": "未学习"}, {"word": "lock", "emoji": "🔒", "category": "其他物品", "proficiency": "未学习"}, {"word": "umbrella", "emoji": "☂️", "category": "其他物品", "proficiency": "未学习"}, {"word": "camera", "emoji": "📷", "category": "其他物品", "proficiency": "未学习"}, {"word": "map", "emoji": "🗺️", "category": "其他物品", "proficiency": "未学习"}, {"word": "globe", "emoji": "🌍", "category": "其他物品", "proficiency": "未学习"}, {"word": "brush", "emoji": "🖌️", "category": "动作", "proficiency": "未学习"}, {"word": "comb", "emoji": "💇", "category": "动作", "proficiency": "未学习"}, {"word": "shave", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "bathe", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "undress", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "iron", "emoji": "👔", "category": "动作", "proficiency": "未学习"}, {"word": "sew", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "knit", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "bake", "emoji": "🧁", "category": "动作", "proficiency": "未学习"}, {"word": "fry", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "boil", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "steam", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "mix", "emoji": "🥣", "category": "动作", "proficiency": "未学习"}, {"word": "stir", "emoji": "🥄", "category": "动作", "proficiency": "未学习"}, {"word": "pour", "emoji": "🫗", "category": "动作", "proficiency": "未学习"}, {"word": "measure", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "sweep", "emoji": "🧹", "category": "动作", "proficiency": "未学习"}, {"word": "mop", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "dust", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "vacuum", "emoji": "🧹", "category": "动作", "proficiency": "未学习"}, {"word": "dry", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "hang", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "fold", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "putaway", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "takeout", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "throwaway", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "plant", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "harvest", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "feed", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "pet", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "groom", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "call", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "text", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "email", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "paste", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "mend", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "hike", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "camp", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "hunt", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "shop", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "buy", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "sell", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "pay", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "cost", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "send", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "receive", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "unlock", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "turnup", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "turndown", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "delicious", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "yucky", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "sweet", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "sour", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "salty", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "bitter", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "spicy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "crispy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "wet", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "messy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "tidy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "young", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "large", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "tiny", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "huge", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "heavy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "quick", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "angry", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "scared", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "surprised", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "tired", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "excited", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "bored", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "hungry", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "thirsty", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "full", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "sick", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "healthy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "strong", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "weak", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "brave", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "cowardly", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "kind", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "mean", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "friendly", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "unfriendly", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "polite", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "rude", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "loud", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "quiet", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "beautiful", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "ugly", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "pretty", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "handsome", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "cute", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "funny", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "silly", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "smart", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "stupid", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "interesting", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "boring", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "easy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "hard", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "difficult", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "simple", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "complex", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "expensive", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "cheap", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "rich", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "poor", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "busy", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "free", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "late", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "early", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "right", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "wrong", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "better", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "worse", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "best", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "worst", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "quickly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "slowly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "loudly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "quietly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "happily", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "sadly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "angrily", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "carefully", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "easily", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "well", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "badly", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "very", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "too", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "quite", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "really", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "just", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "only", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "also", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "either", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "neither", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "always", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "usually", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "often", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "sometimes", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "rarely", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "never", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "everywhere", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "nowhere", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "off", "emoji": "", "category": "副词", "proficiency": "未学习"}, {"word": "since", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "although", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "before", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "after", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "until", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "assoonas", "emoji": "", "category": "连词与介词", "proficiency": "未学习"}, {"word": "me", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "him", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "us", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "them", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "mine", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "yours", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "hers", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "ours", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "theirs", "emoji": "", "category": "代词与限定词", "proficiency": "未学习"}, {"word": "first", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "second", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "third", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "fourth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "fifth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "sixth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "seventh", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "eighth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "ninth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "tenth", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "eleventh", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "twelfth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "thirteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "fourteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "fifteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "sixteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "seventeenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "eighteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "nineteenth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "twentieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "thirtieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "fortieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "fiftieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "sixtieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "seventieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "eightieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "ninetieth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "hundredth", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "thousand", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "million", "emoji": "", "category": "数字", "proficiency": "未学习"}, {"word": "dragon", "emoji": "🐉", "category": "动物", "proficiency": "未学习"}, {"word": "potty", "emoji": "🚽", "category": "其他物品", "proficiency": "未学习"}, {"word": "lantern", "emoji": "🏮", "category": "其他物品", "proficiency": "未学习"}, {"word": "tricycle", "emoji": "🛺", "category": "交通工具", "proficiency": "未学习"}, {"word": "pony", "emoji": "🐴", "category": "动物", "proficiency": "未学习"}, {"word": "dumplings", "emoji": "🥟", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "polarbear", "emoji": "🐻‍❄️", "category": "动物", "proficiency": "未学习"}, {"word": "street", "emoji": "", "category": "场所", "proficiency": "未学习"}, {"word": "alligator", "emoji": "🐊", "category": "动物", "proficiency": "未学习"}, {"word": "blanket", "emoji": "🛌", "category": "家居与房间", "proficiency": "未学习"}, {"word": "meerkat", "emoji": "🦡", "category": "动物", "proficiency": "未学习"}, {"word": "Frenchfries", "emoji": "", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "comforter", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "curtain", "emoji": "🪟", "category": "家居与房间", "proficiency": "未学习"}, {"word": "camel", "emoji": "🐫", "category": "动物", "proficiency": "未学习"}, {"word": "coke", "emoji": "", "category": "饮品", "proficiency": "未学习"}, {"word": "airconditioner", "emoji": "❄️", "category": "家居与房间", "proficiency": "未学习"}, {"word": "rhinoceros", "emoji": "🦏", "category": "动物", "proficiency": "未学习"}, {"word": "wardrobe", "emoji": "🚪", "category": "家居与房间", "proficiency": "未学习"}, {"word": "crab", "emoji": "🦀", "category": "动物", "proficiency": "未学习"}, {"word": "theslidingdoor", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "parrot", "emoji": "🦜", "category": "动物", "proficiency": "未学习"}, {"word": "nipple", "emoji": "🍼", "category": "其他物品", "proficiency": "未学习"}, {"word": "books", "emoji": "", "category": "学校与文具", "proficiency": "未学习"}, {"word": "cottontissue", "emoji": "🧻", "category": "其他物品", "proficiency": "未学习"}, {"word": "hideandseek", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "diaper", "emoji": "👶", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "walrus", "emoji": "🐘🌊", "category": "动物", "proficiency": "未学习"}, {"word": "spaceship", "emoji": "🚀", "category": "交通工具", "proficiency": "未学习"}, {"word": "flamingo", "emoji": "🦩", "category": "动物", "proficiency": "未学习"}, {"word": "carriage", "emoji": "🐎🚗", "category": "交通工具", "proficiency": "未学习"}, {"word": "picture", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "lizard", "emoji": "🦎", "category": "动物", "proficiency": "未学习"}, {"word": "concretemixer", "emoji": "🚛", "category": "交通工具", "proficiency": "未学习"}, {"word": "mosquitonet", "emoji": "🪟🦟", "category": "其他物品", "proficiency": "未学习"}, {"word": "rocket", "emoji": "🚀", "category": "交通工具", "proficiency": "未学习"}, {"word": "washingmachine", "emoji": "🫧", "category": "家居与房间", "proficiency": "未学习"}, {"word": "chameleon", "emoji": "", "category": "动物", "proficiency": "未学习"}, {"word": "bambooshoots", "emoji": "🎋", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "ginger", "emoji": "🫚", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "garlic", "emoji": "🧄", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "wateringcan", "emoji": "🚿🌱", "category": "其他物品", "proficiency": "未学习"}, {"word": "rinsecup", "emoji": "🥤", "category": "其他物品", "proficiency": "未学习"}, {"word": "waterheater", "emoji": "🔥💧", "category": "未分类", "proficiency": "未学习"}, {"word": "tail", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "showerhead", "emoji": "🚿", "category": "家居与房间", "proficiency": "未学习"}, {"word": "schoolbus", "emoji": "🚌", "category": "交通工具", "proficiency": "未学习"}, {"word": "blowdryer", "emoji": "💨", "category": "家居与房间", "proficiency": "未学习"}, {"word": "shuttlebus", "emoji": "🚌", "category": "交通工具", "proficiency": "未学习"}, {"word": "judge", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "subwaytrain", "emoji": "🚇", "category": "交通工具", "proficiency": "未学习"}, {"word": "bathtub", "emoji": "🛁", "category": "家居与房间", "proficiency": "未学习"}, {"word": "painter", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "basin", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "fingernail", "emoji": "💅", "category": "身体部位", "proficiency": "未学习"}, {"word": "lineup", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "battery", "emoji": "🔋", "category": "其他物品", "proficiency": "未学习"}, {"word": "knock", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "mask", "emoji": "😷", "category": "其他物品", "proficiency": "未学习"}, {"word": "swim", "emoji": "🏊", "category": "动作", "proficiency": "未学习"}, {"word": "magnifier", "emoji": "🔍", "category": "其他物品", "proficiency": "未学习"}, {"word": "biscuits", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "slide", "emoji": "🛝", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "kite", "emoji": "🪁", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "trashcan", "emoji": "🗑️", "category": "其他物品", "proficiency": "未学习"}, {"word": "swing", "emoji": "🎠", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "grasshopper", "emoji": "🦗", "category": "动物", "proficiency": "未学习"}, {"word": "windmill", "emoji": "🏙️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "beetle", "emoji": "🪲", "category": "动物", "proficiency": "未学习"}, {"word": "fan", "emoji": "🎐", "category": "家居与房间", "proficiency": "未学习"}, {"word": "worm", "emoji": "🪱", "category": "动物", "proficiency": "未学习"}, {"word": "stroller", "emoji": "👶🚗", "category": "交通工具", "proficiency": "未学习"}, {"word": "chimpanzee", "emoji": "🐒", "category": "动物", "proficiency": "未学习"}, {"word": "highchair", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "digger", "emoji": "🚜", "category": "交通工具", "proficiency": "未学习"}, {"word": "fireextinguisher", "emoji": "🧯", "category": "未分类", "proficiency": "未学习"}, {"word": "radiator", "emoji": "🌡️", "category": "家居与房间", "proficiency": "未学习"}, {"word": "highspeedtrain", "emoji": "🚄", "category": "交通工具", "proficiency": "未学习"}, {"word": "mantis", "emoji": "🦗", "category": "动物", "proficiency": "未学习"}, {"word": "refrigerator", "emoji": "🧊", "category": "家居与房间", "proficiency": "未学习"}, {"word": "hospital", "emoji": "🏥", "category": "场所", "proficiency": "未学习"}, {"word": "microwave", "emoji": "📦", "category": "家居与房间", "proficiency": "未学习"}, {"word": "piano", "emoji": "🎹", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "hotairballoon", "emoji": "🎈", "category": "交通工具", "proficiency": "未学习"}, {"word": "chopsticks", "emoji": "🥢", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "square", "emoji": "🟥", "category": "形状", "proficiency": "未学习"}, {"word": "Mars", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "circle", "emoji": "🟡", "category": "形状", "proficiency": "未学习"}, {"word": "donuts", "emoji": "🍩", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "rectangle", "emoji": "🟦", "category": "形状", "proficiency": "未学习"}, {"word": "restaurant", "emoji": "🍽️", "category": "场所", "proficiency": "未学习"}, {"word": "airfryer", "emoji": "🍳", "category": "家居与房间", "proficiency": "未学习"}, {"word": "oval", "emoji": "🥚", "category": "形状", "proficiency": "未学习"}, {"word": "crane", "emoji": "🏗️", "category": "交通工具", "proficiency": "未学习"}, {"word": "tanktruck", "emoji": "🚛", "category": "交通工具", "proficiency": "未学习"}, {"word": "sunflower", "emoji": "🌻", "category": "自然与天气", "proficiency": "未学习"}, {"word": "stopsign", "emoji": "🛑", "category": "其他物品", "proficiency": "未学习"}, {"word": "lemon", "emoji": "🍋", "category": "水果", "proficiency": "未学习"}, {"word": "jellyfish", "emoji": "🪼", "category": "动物", "proficiency": "未学习"}, {"word": "trafficcone", "emoji": "🔶", "category": "其他物品", "proficiency": "未学习"}, {"word": "dragonfruit", "emoji": "🐉🥝", "category": "水果", "proficiency": "未学习"}, {"word": "clownfish", "emoji": "🐠", "category": "动物", "proficiency": "未学习"}, {"word": "jaguar", "emoji": "🐆", "category": "动物", "proficiency": "未学习"}, {"word": "clown", "emoji": "🤡", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "motorscooter", "emoji": "🛵", "category": "交通工具", "proficiency": "未学习"}, {"word": "shrimp", "emoji": "🦐", "category": "动物", "proficiency": "未学习"}, {"word": "biplane", "emoji": "✈️", "category": "交通工具", "proficiency": "未学习"}, {"word": "little", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "trombone", "emoji": "🎺", "category": "乐器", "proficiency": "未学习"}, {"word": "fishingrod", "emoji": "🎣", "category": "其他物品", "proficiency": "未学习"}, {"word": "shout", "emoji": "📢", "category": "动作", "proficiency": "未学习"}, {"word": "pumpkin", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "airplane", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "balloon", "emoji": "🎈", "category": "交通工具", "proficiency": "未学习"}, {"word": "heartbeat", "emoji": "", "category": "身体部位", "proficiency": "未学习"}, {"word": "cellphone", "emoji": "📱", "category": "其他物品", "proficiency": "未学习"}, {"word": "sneeze", "emoji": "🤧", "category": "动作", "proficiency": "未学习"}, {"word": "pentagon", "emoji": "⬠", "category": "形状", "proficiency": "未学习"}, {"word": "earphone", "emoji": "🎧", "category": "其他物品", "proficiency": "未学习"}, {"word": "snore", "emoji": "😴", "category": "动作", "proficiency": "未学习"}, {"word": "hexagon", "emoji": "⬡", "category": "形状", "proficiency": "未学习"}, {"word": "telephone", "emoji": "📞", "category": "其他物品", "proficiency": "未学习"}, {"word": "fart", "emoji": "💨😂", "category": "动作", "proficiency": "未学习"}, {"word": "jujube", "emoji": "🟤", "category": "水果", "proficiency": "未学习"}, {"word": "eggwhite", "emoji": "🥚", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "cherrytomato", "emoji": "🍅", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "laptop", "emoji": "💻", "category": "其他物品", "proficiency": "未学习"}, {"word": "eggyolk", "emoji": "🥚", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "taro", "emoji": "🟣", "category": "水果", "proficiency": "未学习"}, {"word": "kiwi", "emoji": "🥝", "category": "水果", "proficiency": "未学习"}, {"word": "tractor", "emoji": "🚜", "category": "交通工具", "proficiency": "未学习"}, {"word": "bat", "emoji": "🦇", "category": "动物", "proficiency": "未学习"}, {"word": "mosquito", "emoji": "🦟", "category": "动物", "proficiency": "未学习"}, {"word": "tank", "emoji": "🪖", "category": "交通工具", "proficiency": "未学习"}, {"word": "koala", "emoji": "🐨", "category": "动物", "proficiency": "未学习"}, {"word": "grapes", "emoji": "🍇", "category": "未分类", "proficiency": "未学习"}, {"word": "pushharder", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "rooster", "emoji": "🐓", "category": "动物", "proficiency": "未学习"}, {"word": "luggage", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "hedgehog", "emoji": "🦔", "category": "动物", "proficiency": "未学习"}, {"word": "bucket", "emoji": "🪣", "category": "其他物品", "proficiency": "未学习"}, {"word": "throw", "emoji": "🤾", "category": "动作", "proficiency": "未学习"}, {"word": "duckling", "emoji": "🦆", "category": "动物", "proficiency": "未学习"}, {"word": "catch", "emoji": "🤲", "category": "动作", "proficiency": "未学习"}, {"word": "chick", "emoji": "🐤", "category": "动物", "proficiency": "未学习"}, {"word": "racingcar", "emoji": "🏎️", "category": "交通工具", "proficiency": "未学习"}, {"word": "park", "emoji": "🏞️", "category": "场所", "proficiency": "未学习"}, {"word": "reporter", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "hen", "emoji": "🐔", "category": "动物", "proficiency": "未学习"}, {"word": "shake", "emoji": "🤝", "category": "动作", "proficiency": "未学习"}, {"word": "goldfish", "emoji": "🐟", "category": "动物", "proficiency": "未学习"}, {"word": "deer", "emoji": "🦌", "category": "动物", "proficiency": "未学习"}, {"word": "raiseyourhand", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "caterpillar", "emoji": "🐛", "category": "动物", "proficiency": "未学习"}, {"word": "turnaround", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "redenvelope", "emoji": "🧧", "category": "其他物品", "proficiency": "未学习"}, {"word": "tadpole", "emoji": "🐸", "category": "动物", "proficiency": "未学习"}, {"word": "skunk", "emoji": "🦨", "category": "动物", "proficiency": "未学习"}, {"word": "cheetah", "emoji": "🐆", "category": "动物", "proficiency": "未学习"}, {"word": "hippopotamus", "emoji": "🦛", "category": "动物", "proficiency": "未学习"}, {"word": "photoframe", "emoji": "🖼️", "category": "其他物品", "proficiency": "未学习"}, {"word": "purse", "emoji": "👛", "category": "其他物品", "proficiency": "未学习"}, {"word": "clapyourhands", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "donkey", "emoji": "🫏", "category": "动物", "proficiency": "未学习"}, {"word": "coveryoureyes", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "starfruit", "emoji": "⭐🍑", "category": "水果", "proficiency": "未学习"}, {"word": "kickyourlegs", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "dinosaur", "emoji": "🦕", "category": "动物", "proficiency": "未学习"}, {"word": "cantaloupe", "emoji": "🍈", "category": "水果", "proficiency": "未学习"}, {"word": "waveyourhand", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "waxguard", "emoji": "👂", "category": "其他物品", "proficiency": "未学习"}, {"word": "patyourtummy", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "whiteradish", "emoji": "🥬", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "open/knockthedoor", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "bone", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "mooncake", "emoji": "🥮", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "turnon/offthelight", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "openyourmouth", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "subwaystation", "emoji": "", "category": "场所", "proficiency": "未学习"}, {"word": "tickle", "emoji": "🤞", "category": "动作", "proficiency": "未学习"}, {"word": "wheel", "emoji": "☸️", "category": "其他物品", "proficiency": "未学习"}, {"word": "firestation", "emoji": "", "category": "场所", "proficiency": "未学习"}, {"word": "mommy", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "splash", "emoji": "💦", "category": "动作", "proficiency": "未学习"}, {"word": "hammer", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "daddy", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "takeabath", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "astronaut", "emoji": "🧑‍🚀", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "fillupthecup", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "rattle", "emoji": "🔔", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "pouritout", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "scoop", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "littlebrother", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "basketball", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "wheelchair", "emoji": "🦽", "category": "交通工具", "proficiency": "未学习"}, {"word": "children", "emoji": "", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "football", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "windowscreen", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "falloff", "emoji": "📉", "category": "动作", "proficiency": "未学习"}, {"word": "vitaminAD", "emoji": "💊", "category": "其他物品", "proficiency": "未学习"}, {"word": "bump", "emoji": "💥", "category": "未分类", "proficiency": "未学习"}, {"word": "pomegranate", "emoji": "🍎", "category": "水果", "proficiency": "未学习"}, {"word": "poo", "emoji": "💩", "category": "未分类", "proficiency": "未学习"}, {"word": "touchtheground", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "pee", "emoji": "🚽", "category": "未分类", "proficiency": "未学习"}, {"word": "snowflake", "emoji": "❄️", "category": "自然与天气", "proficiency": "未学习"}, {"word": "teeth", "emoji": "🦷", "category": "身体部位", "proficiency": "未学习"}, {"word": "snowman", "emoji": "⛄", "category": "自然与天气", "proficiency": "未学习"}, {"word": "popcorn", "emoji": "🍿", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "bellybutton", "emoji": "🔘", "category": "身体部位", "proficiency": "未学习"}, {"word": "laugh", "emoji": "😂", "category": "动作", "proficiency": "未学习"}, {"word": "cry", "emoji": "😢", "category": "动作", "proficiency": "未学习"}, {"word": "smile", "emoji": "😊", "category": "动作", "proficiency": "未学习"}, {"word": "highfive", "emoji": "🖐️", "category": "动作", "proficiency": "未学习"}, {"word": "stampyourfeet", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "snake", "emoji": "🐍", "category": "动物", "proficiency": "未学习"}, {"word": "jumper", "emoji": "🧥", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "button", "emoji": "🔘", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "toucan", "emoji": "🦜", "category": "动物", "proficiency": "未学习"}, {"word": "slippers", "emoji": "🩴", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "bunny", "emoji": "🐰", "category": "动物", "proficiency": "未学习"}, {"word": "lotion", "emoji": "🧴", "category": "其他物品", "proficiency": "未学习"}, {"word": "bib", "emoji": "👶👔", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "elevator", "emoji": "🛗", "category": "其他物品", "proficiency": "未学习"}, {"word": "pigeon", "emoji": "🐦", "category": "动物", "proficiency": "未学习"}, {"word": "peekaboo", "emoji": "🙈", "category": "动作", "proficiency": "未学习"}, {"word": "pelican", "emoji": "🐦", "category": "动物", "proficiency": "未学习"}, {"word": "yummy", "emoji": "😋", "category": "未分类", "proficiency": "未学习"}, {"word": "boar", "emoji": "🐗", "category": "动物", "proficiency": "未学习"}, {"word": "hook", "emoji": "🪝", "category": "其他物品", "proficiency": "未学习"}, {"word": "point", "emoji": "☝️", "category": "动作", "proficiency": "未学习"}, {"word": "bottle", "emoji": "🍼", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "ricecooker", "emoji": "🍚", "category": "家居与房间", "proficiency": "未学习"}, {"word": "stickouttongue", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "wavehello", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "drum", "emoji": "🥁", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "magiccube", "emoji": "🎲", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "sloth", "emoji": "🦥", "category": "动物", "proficiency": "未学习"}, {"word": "playmat", "emoji": "", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "schoolbag", "emoji": "🎒", "category": "学校与文具", "proficiency": "未学习"}, {"word": "fingertouch", "emoji": "", "category": "身体部位", "proficiency": "未学习"}, {"word": "givemeafive", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "remotecontrol", "emoji": "📱", "category": "其他物品", "proficiency": "未学习"}, {"word": "brushyourteeth", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "kettle", "emoji": "🫖", "category": "家居与房间", "proficiency": "未学习"}, {"word": "stretchuphigh", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "combyourhair", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "crocodile", "emoji": "🐊", "category": "动物", "proficiency": "未学习"}, {"word": "box", "emoji": "📦", "category": "其他物品", "proficiency": "未学习"}, {"word": "bubble", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "lollipop", "emoji": "🍭", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "lookatme", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "washyourhands", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "kissmommy", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "broom", "emoji": "🧹", "category": "家居与房间", "proficiency": "未学习"}, {"word": "dustpan", "emoji": "🧹", "category": "家居与房间", "proficiency": "未学习"}, {"word": "zipper", "emoji": "🧥", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "bamboo", "emoji": "🎋", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "redlight", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "greenlight", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "teapot", "emoji": "🫖", "category": "家居与房间", "proficiency": "未学习"}, {"word": "yellowlight", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "teacup", "emoji": "☕", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "pencilbox", "emoji": "✏️📦", "category": "学校与文具", "proficiency": "未学习"}, {"word": "liedown", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "hose", "emoji": "🚿", "category": "家居与房间", "proficiency": "未学习"}, {"word": "stool", "emoji": "🪑", "category": "家居与房间", "proficiency": "未学习"}, {"word": "ladder", "emoji": "🪜", "category": "家居与房间", "proficiency": "未学习"}, {"word": "snail", "emoji": "🐌", "category": "动物", "proficiency": "未学习"}, {"word": "detergent", "emoji": "🧴", "category": "家居与房间", "proficiency": "未学习"}, {"word": "swatter", "emoji": "🪰", "category": "家居与房间", "proficiency": "未学习"}, {"word": "gerbil", "emoji": "", "category": "动物", "proficiency": "未学习"}, {"word": "dandelion", "emoji": "🌼", "category": "自然与天气", "proficiency": "未学习"}, {"word": "violin", "emoji": "🎻", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "cookies", "emoji": "🍪", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "guitar", "emoji": "🎸", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "vacuumcleaner", "emoji": "", "category": "家居与房间", "proficiency": "未学习"}, {"word": "wall", "emoji": "🧱", "category": "家居与房间", "proficiency": "未学习"}, {"word": "saxophone", "emoji": "🎷", "category": "乐器", "proficiency": "未学习"}, {"word": "puppy", "emoji": "🐶", "category": "动物", "proficiency": "未学习"}, {"word": "xylophone", "emoji": "🎵", "category": "乐器", "proficiency": "未学习"}, {"word": "kitten", "emoji": "🐱", "category": "动物", "proficiency": "未学习"}, {"word": "trumpet", "emoji": "🎺", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "accordion", "emoji": "🪗", "category": "乐器", "proficiency": "未学习"}, {"word": "flute", "emoji": "🪈", "category": "乐器", "proficiency": "未学习"}, {"word": "eggplant", "emoji": "🍆", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "cymbals", "emoji": "🥁", "category": "乐器", "proficiency": "未学习"}, {"word": "tambourine", "emoji": "🥁", "category": "乐器", "proficiency": "未学习"}, {"word": "wipeyourmouth", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "electronicscale", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "blowakiss", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "heart", "emoji": "❤️", "category": "未分类", "proficiency": "未学习"}, {"word": "blueberry", "emoji": "🫐", "category": "水果", "proficiency": "未学习"}, {"word": "triangle", "emoji": "🔺", "category": "形状", "proficiency": "未学习"}, {"word": "burp", "emoji": "😮💨", "category": "动作", "proficiency": "未学习"}, {"word": "sunglasses", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "Whatafartmachine!", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "Whoismommy'ssweetiepie?", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "pan", "emoji": "🍳", "category": "餐具与厨具", "proficiency": "未学习"}, {"word": "whale", "emoji": "🐋", "category": "动物", "proficiency": "未学习"}, {"word": "antelope", "emoji": "🦌", "category": "动物", "proficiency": "未学习"}, {"word": "bidet", "emoji": "🚿", "category": "家居与房间", "proficiency": "未学习"}, {"word": "gorilla", "emoji": "🦍", "category": "动物", "proficiency": "未学习"}, {"word": "walnut", "emoji": "", "category": "动物", "proficiency": "未学习"}, {"word": "goat", "emoji": "🐐", "category": "动物", "proficiency": "未学习"}, {"word": "leopard", "emoji": "🐆", "category": "动物", "proficiency": "未学习"}, {"word": "starfish", "emoji": "⭐🌊", "category": "动物", "proficiency": "未学习"}, {"word": "tackle", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "takeanap", "emoji": "", "category": "动作", "proficiency": "未学习"}, {"word": "monster", "emoji": "👾", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "cicada", "emoji": "🦗", "category": "动物", "proficiency": "未学习"}, {"word": "floor", "emoji": "🟫", "category": "家居与房间", "proficiency": "未学习"}, {"word": "telescope", "emoji": "🔭", "category": "未分类", "proficiency": "未学习"}, {"word": "rainbow", "emoji": "🌈", "category": "自然与天气", "proficiency": "未学习"}, {"word": "savingbox", "emoji": "🐖", "category": "其他物品", "proficiency": "未学习"}, {"word": "tangerine", "emoji": "🍊", "category": "水果", "proficiency": "未学习"}, {"word": "television", "emoji": "📺", "category": "其他物品", "proficiency": "未学习"}, {"word": "wok", "emoji": "🍳", "category": "家居与房间", "proficiency": "未学习"}, {"word": "clock/alarmclock", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "sayyoulater", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "ceiling", "emoji": "⬜", "category": "家居与房间", "proficiency": "未学习"}, {"word": "oink/ribbit/neigh/meow/baaa/quack", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "raindrop", "emoji": "💧", "category": "自然与天气", "proficiency": "未学习"}, {"word": "seahorse", "emoji": "🐴🌊", "category": "动物", "proficiency": "未学习"}, {"word": "cupcake", "emoji": "🧁", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "basket", "emoji": "🧺", "category": "其他物品", "proficiency": "未学习"}, {"word": "princess", "emoji": "👸", "category": "家庭与人物", "proficiency": "未学习"}, {"word": "face", "emoji": "😀", "category": "身体部位", "proficiency": "未学习"}, {"word": "climb", "emoji": "🧗", "category": "动作", "proficiency": "未学习"}, {"word": "round", "emoji": "", "category": "形容词与情感", "proficiency": "未学习"}, {"word": "underwear", "emoji": "", "category": "衣服与穿戴", "proficiency": "未学习"}, {"word": "otter", "emoji": "🦦", "category": "动物", "proficiency": "未学习"}, {"word": "octopus", "emoji": "🐙", "category": "动物", "proficiency": "未学习"}, {"word": "hill", "emoji": "", "category": "自然与天气", "proficiency": "未学习"}, {"word": "hotel", "emoji": "🏨", "category": "场所", "proficiency": "未学习"}, {"word": "seesaw", "emoji": "", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "muffin", "emoji": "🧁", "category": "蔬菜与食物", "proficiency": "未学习"}, {"word": "peacock", "emoji": "🦚", "category": "动物", "proficiency": "未学习"}, {"word": "closet", "emoji": "🚪", "category": "家居与房间", "proficiency": "未学习"}, {"word": "cola", "emoji": "", "category": "饮品", "proficiency": "未学习"}, {"word": "scooter", "emoji": "🛴", "category": "交通工具", "proficiency": "未学习"}, {"word": "helicopter", "emoji": "🚁", "category": "交通工具", "proficiency": "未学习"}, {"word": "photo", "emoji": "📸", "category": "其他物品", "proficiency": "未学习"}, {"word": "vase", "emoji": "🏺", "category": "其他物品", "proficiency": "未学习"}, {"word": "clay", "emoji": "🏺", "category": "其他物品", "proficiency": "未学习"}, {"word": "blocks", "emoji": "🧱", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "puzzle", "emoji": "🧩", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "puppet", "emoji": "🎭", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "watergun", "emoji": "🔫", "category": "玩具与游戏", "proficiency": "未学习"}, {"word": "motorbike", "emoji": "", "category": "交通工具", "proficiency": "未学习"}, {"word": "exit", "emoji": "", "category": "未分类", "proficiency": "未学习"}, {"word": "clap", "emoji": "👏", "category": "动作", "proficiency": "未学习"}, {"word": "nod", "emoji": "😌", "category": "动作", "proficiency": "未学习"}, {"word": "tummy", "emoji": "🫃", "category": "身体部位", "proficiency": "未学习"}];
+init();
+
+// ===== Emoji Dictionary (Common kindergarten words) =====
+const EMOJI_DICT = {
+  // Animals
+  "dog":"🐶","cat":"🐱","bird":"🐦","fish":"🐟","rabbit":"🐰","bunny":"🐰",
+  "horse":"🐴","cow":"🐮","pig":"🐷","sheep":"🐑","goat":"🐐","duck":"🦆",
+  "chicken":"🐔","rooster":"🐓","frog":"🐸","monkey":"🐵","bear":"🐻","panda":"🐼",
+  "tiger":"🐯","lion":"🦁","elephant":"🐘","giraffe":"🦒","zebra":"🦓","deer":"🦌",
+  "mouse":"🐭","rat":"🐀","fox":"🦊","wolf":"🐺","penguin":"🐧","bat":"🦇",
+  "butterfly":"🦋","bee":"🐝","ant":"🐜","spider":"🕷","snake":"🐍","turtle":"🐢",
+  "crocodile":"🐊","shark":"🦈","whale":"🐋","dolphin":"🐬","octopus":"🐙","crab":"🦀",
+  "lobster":"🦞","snail":"🐌","worm":"🪱","ladybug":"🐞","dragonfly":"🪰",
+  "pets":"🐶","farm":"🐮","wild":"🦁","sea":"🐟","insect":"🐝",
+  // Food & Fruits
+  "apple":"🍎","banana":"🍌","orange":"🍊","grape":"🍇","strawberry":"🍓",
+  "watermelon":"🍉","pineapple":"🍍","mango":"🥭","peach":"🍑","pear":"🍐",
+  "cherry":"🍒","lemon":"🍋","coconut":"🥥","kiwi":"🥝","avocado":"🥑",
+  "tomato":"🍅","carrot":"🥕","potato":"🥔","broccoli":"🥦","corn":"🌽",
+  "pepper":"🌶","onion":"🧅","garlic":"🧄","cucumber":"🥒","lettuce":"🥬",
+  "bread":"🍞","cake":"🍰","cookie":"🍪","candy":"🍬","chocolate":"🍫",
+  "ice cream":"🍦","donut":"🍩","pie":"🥧","pizza":"🍕","burger":"🍔",
+  "sandwich":"🥪","hotdog":"🌭","taco":"🌮","rice":"🍚","noodle":"🍜",
+  "soup":"🍲","salad":"🥗","cheese":"🧀","milk":"🥛","juice":"🧃","coffee":"☕",
+  "tea":"🍵","water":"💧","egg":"🥚","sausage":"🌭","chicken":"🍗","steak":"🥩",
+  "food":"🍽","fruit":"🍎","vegetable":"🥦","breakfast":"🍳","lunch":"🍱","dinner":"🍽",
+  // Body parts
+  "head":"🗿","hair":"💇","face":"😊","eye":"👁","ear":"👂","nose":"👃",
+  "mouth":"👄","lip":"👄","tooth":"🦷","tongue":"👅","eyebrw":"🤨","eyelash":"👁",
+  "neck":"🦒","shoulder":"🤷","arm":"💪","hand":"✋","finger":"👈","thumb":"👍",
+  "chest":"💪","stomach":"🤰","leg":"🦵","knee":"🦿","foot":"🦶","toe":"🦶",
+  "body":"🧍","skeleton":"💀","heart":"❤️","blood":"🩸","bone":"🦴",
+  "smile":"😊","cry":"😢","wink":"😉","kiss":"😘","laugh":"😄",
+  // Family
+  "family":"👪","father":"👨","dad":"👨","daddy":"👨","mother":"👩","mom":"👩","mommy":"👩",
+  "parent":"👨👩","son":"👦","daughter":"👧","brother":"👦","sister":"👧",
+  "baby":"👶","child":"🧒","boy":"👦","girl":"👧","man":"👨","woman":"👩",
+  "grandpa":"👴","grandma":"👵","grandfather":"👴","grandmother":"👵",
+  "uncle":"👨","aunt":"👩","cousin":"👦","baby":"👶",
+  // Colors
+  "red":"🔴","blue":"🔵","yellow":"🟡","green":"🟢","orange":"🟠","purple":"🟣",
+  "pink":"🩷","black":"⚫","white":"⚪","brown":"🟤","gray":"⚪","gold":"🥇","silver":"🥈",
+  "color":"🎨","rainbow":"🌈",
+  // Numbers
+  "one":"1️⃣","two":"2️⃣","three":"3️⃣","four":"4️⃣","five":"5️⃣",
+  "six":"6️⃣","seven":"7️⃣","eight":"8️⃣","nine":"9️⃣","ten":"🔟",
+  "zero":"0️⃣","hundred":"💯","thousand":"🔢","number":"🔢",
+  // School & Stationery
+  "book":"📕","pen":"✏️","pencil":"✏️","eraser":"🧹","ruler":"📏",
+  "scissors":"✂️","glue":"🧴","crayon":"🖍","marker":"🖊","paper":"📄",
+  "notebook":"📓","backpack":"🎒","school":"🏫","classroom":"🏫","teacher":"👩🏫","student":"🧑🎓",
+  "desk":"🪑","chair":"🪑","blackboard":"🖤","bell":"🔔","bus":"🚌",
+  // House & Rooms
+  "house":"🏠","home":"🏡","room":"🚪","bedroom":"🛏","bathroom":"🚿",
+  "kitchen":"🍳","living room":"🛋","dining room":"🍽","garden":"🌻","garage":"🚗",
+  "door":"🚪","window":"🪟","wall":"🧱","floor":"🟫","ceiling":"⬆️","roof":"🏠",
+  "bed":"🛏","sofa":"🛋","table":"🪑","chair":"🪑","lamp":"💡","clock":"🕐",
+  "fridge":"🧊","oven":"🔥","sink":"🚿","toilet":"🚽","shower":"🚿","tub":"🛁",
+  // Clothes
+  "shirt":"👕","tshirt":"👕","sweater":"🧥","jacket":"🧥","coat":"🧥",
+  "pants":"👖","jeans":"👖","dress":"👗","skirt":"👗","shoes":"👟","socks":"🧦",
+  "hat":"🧢","cap":"🧢","glasses":"👓","scarf":"🧣","gloves":"🧤","boots":"👢",
+  "clothes":"👕","uniform":"👔","pajamas":"� Sleepy","swimsuit":"🩱",
+  // Weather & Nature
+  "sun":"☀️","moon":"🌙","star":"⭐","cloud":"☁️","rain":"🌧","snow":"❄️",
+  "wind":"💨","storm":"⛈","rainbow":"🌈","sky":"🌤","sea":"🌊","ocean":"🌊",
+  "river":"🏞","lake":"🏞","mountain":"⛰","hill":"🏔","forest":"🌲","tree":"🌳",
+  "flower":"🌸","rose":"🌹","leaf":"🍃","grass":"🌿","garden":"🌻","park":"🏞",
+  "beach":"🏖","sand":"🏖","stone":"🪨","rock":"🪨","fire":"🔥","ice":"🧊",
+  "weather":"🌤","spring":"🌸","summer":"☀️","autumn":"🍂","winter":"❄️",
+  "hot":"🔥","cold":"🥶","warm":"🌤","cool":"🍃",
+  // Actions & Verbs
+  "run":"🏃","jump":"⬆️","walk":"🚶","swim":"🏊","fly":"✈️","climb":"🧗",
+  "dance":"💃","sing":"🎤","play":"⚽","eat":"😋","drink":"🥤","sleep":"😴",
+  "wake":"⏰","sit":"🧘","stand":"🧍","read":"📖","write":"✍️","draw":"🎨",
+  "paint":"🎨","cook":"🍳","wash":"🚿","clean":"🧹","open":"👐","close":"✊",
+  "push":"👉","pull":"👈","give":"🤲","take":"✋","throw":"🤾","catch":"🤾",
+  "look":"👀","see":"👀","hear":"👂","smell":"👃","taste":"👅","touch":"✋",
+  "go":"🚶","come":"👉","stop":"🛑","start":"🟢","help":"🤝","hug":"🤗",
+  "kiss":"😘","laugh":"😄","cry":"😢","love":"❤️","like":"👍","want":"🤲",
+  // Sports & Toys
+  "ball":"⚽","football":"⚽","basketball":"🏀","baseball":"⚾","tennis":"🎾",
+  "soccer":"⚽","swim":"🏊","bike":"🚲","bicycle":"🚲","car":"🚗","bus":"🚌",
+  "train":"🚂","plane":"✈️","boat":"🚣","ship":"🚢","bike":"🚲","toy":"🧸",
+  "doll":"🎎","game":"🎮","puzzle":"🧩","kite":"🪁","balloon":"🎈","card":"🃏",
+  "music":"🎵","song":"🎵","drum":"🥁","guitar":"🎸","piano":"🎹","violin":"🎻",
+  // Shapes & Objects
+  "circle":"⭕","square":"🟧","triangle":"🔺","rectangle":"🟧","diamond":"💎",
+  "star":"⭐","heart":"❤️","oval":"⭕","shape":"🔷",
+  "key":"🔑","lock":"🔒","door":"🚪","window":"🪟","mirror":"🪞","phone":"📱",
+  "camera":"📷","tv":"📺","radio":"📻","computer":"💻","tablet":"📱","watch":"⌚",
+  "bag":"👜","box":"📦","cup":"☕","plate":"🍽","bowl":"🥣","spoon":"🥄","fork":"🍴","knife":"🔪",
+  // Time & Calendar
+  "morning":"🌅","afternoon":"☀️","evening":"🌆","night":"🌙","today":"📅",
+  "yesterday":"⬅️","tomorrow":"➡️","week":"📅","month":"📆","year":"📆",
+  "birthday":"🎂","holiday":"🎉","christmas":"🎄","halloween":"🎃","easter":"🐣",
+  "monday":"📅","tuesday":"📅","wednesday":"📅","thursday":"📅","friday":"📅","saturday":"📅","sunday":"📅",
+  "january":"📆","february":"📆","march":"📆","april":"📆","may":"📆","june":"📆",
+  "july":"📆","august":"📆","september":"📆","october":"📆","november":"📆","december":"📆",
+  // Emotions & Feelings
+  "happy":"😊","sad":"😢","angry":"😡","scared":"😨","tired":"😴","sleepy":"😴",
+  "hungry":"😋","thirsty":"🥤","sick":"🤒","hot":"🔥","cold":"🥶","well":"😊",
+  "excited":"🤩","nervous":"😰","shy":"🫣","proud":"😌","jealous":"😒","lonely":"😔",
+  "bored":"😑","surprised":"😲","worried":"😟","confident":"😎","naughty":"😈",
+  "kind":"😇","friendly":"🤝","polite":"🙏","rude":"😤","lazy":"😴",
+  // Directions & Prepositions
+  "up":"⬆️","down":"⬇️","left":"⬅️","right":"➡️","here":"📍","there":"📍",
+  "in":"📥","on":"📤","under":"⬇️","behind":"⬇️","in front of":"⬆️","next to":"➡️",
+  "between":"↔️","above":"⬆️","below":"⬇️","near":"📍","far":"📏",
+  // Adjectives
+  "big":"🐘","small":"🐜","tall":"🦒","short":"🐜","long":"📏","fat":"🐷","thin":"🦒",
+  "fast":"⚡","slow":"🐢","strong":"💪","weak":"🥀","hard":"🪨","soft":"🧸",
+  "new":"🆕","old":"👴","young":"👶","clean":"🧹","dirty":"🩹","hot":"🔥","cold":"🧊",
+  "easy":"✅","difficult":"❌","good":"👍","bad":"👎","beautiful":"😊","ugly":"👹",
+  "happy":"😊","sad":"😢","funny":"😂","cute":"🥰","smart":"🧠","silly":"😜",
+  // Places
+  "school":"🏫","park":"🏞","zoo":"🦁","museum":"🏛","library":"📚","hospital":"🏥",
+  "store":"🏪","restaurant":"🍽","cinema":"🎬","theater":"🎭","stadium":"🏟",
+  "airport":"✈️","station":"🚉","farm":"🏡","beach":"🏖","forest":"🌲","mountain":"⛰",
+  "city":"🏙","village":"🏘","street":"🛣","road":"🛣","bridge":"🌉","river":"🏞",
+  // Holidays & Festivals
+  "christmas":"🎄","santa":"🎅","tree":"🌲","gift":"🎁","card":"🃏",
+  "halloween":"🎃","pumpkin":"🎃","candy":"🍬","ghost":"👻","witch":"🧙",
+  "easter":"🐣","egg":"🥚","bunny":"🐰",
+  "birthday":"🎂","cake":"🍰","candle":"🕯","balloon":"🎈","party":"🎉",
+  "new year":"🎆","firework":"🎆",
+  // Jobs & People
+  "doctor":"🏥","nurse":"💊","teacher":"👩🏫","student":"🧑🎓","police":"👮",
+  "firefighter":"🚒","driver":"🚗","farmer":"🌾","cook":"🍳","singer":"🎤",
+  "dancer":"💃","artist":"🎨","writer":"✍️","scientist":"🔬","astronaut":"🚀",
+  "pilot":"✈️","sailor":"🚢","chef":"👨🍳","waiter":"🍽","actor":"🎭",
+  // Misc
+  "hello":"👋","hi":"👋","goodbye":"👋","bye":"👋","thank you":"🙏","please":"🙏",
+  "sorry":"🙏","excuse me":"🙋","yes":"✅","no":"❌","ok":"👌","wow":"😲",
+  "oops":"😅","ouch":"🤕","bravo":"👏","good job":"👏","well done":"👏",
+  "i":"🧑","you":"🧑","he":"👨","she":"👩","we":"👥","they":"👥","my":"🧑","your":"🧑",
+  "this":"📍","that":"📍","these":"📍","those":"📍",
+  "is":"✅","are":"✅","am":"✅","can":"✅","can't":"❌","do":"✅","don't":"❌",
+  "have":"✅","has":"✅","had":"✅","will":"✅","go":"🚶","went":"🚶","come":"👉"
+};
+
+function autoAssignEmoji(){
+  let count = 0;
+  wordDatabase.forEach(w => {
+    if(w.emoji) return; // skip if already has emoji
+    const key = w.word.toLowerCase().trim();
+    if(EMOJI_DICT[key]){
+      w.emoji = EMOJI_DICT[key];
+      count++;
+    }
+  });
+  if(count === 0){
+    showToast('所有单词都已匹配Emoji，无需再匹配！');
+  } else {
+    saveData();
+    updateStats();
+    renderTable();
+    showToast(`成功匹配 ${count} 个单词的Emoji！`);
+  }
+}
+
+
+// ===== Restore Default =====
+function restoreDefault(){
+  if(!confirm('确定恢复默认词库吗？\n当前词库数据将被清除，恢复为初始默认词库。'))return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(PHOTO_CACHE_KEY);
+  showToast('正在恢复默认词库...');
+  setTimeout(()=>location.reload(),500);
+}
+</script>
+</body>
+</html>
